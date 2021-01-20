@@ -437,12 +437,13 @@ def get_unlock_state_features(filename, start_time, end_time):
         :param filename: input filename
         :param start_time: start time of needed range
         :param end_time: end time of needed range
-        :return: dict of unlock state features: lock_num, unlock_num
+        :return: dict of unlock state features: lock_num, unlock_num, phone_usage time
         """
 
     unlock_state_features = {
         "lock_num": 0,
         "unlock_num": 0,
+        "phone_usage": np.Nan
     }
 
     table = pd.read_csv(filename)
@@ -517,6 +518,65 @@ def get_microphone_features(filename, start_time, end_time):
             microphone_features["energy_stdev"] = statistics.stdev(energies)
 
     return microphone_features
+
+
+def get_stored_media_features(filename, start_time, end_time):
+    """
+
+        :param filename: input filename
+        :param start_time: start time of needed range
+        :param end_time: end time of needed range
+        :return: dict of stored media features: images_num, videos_num, music_num
+        """
+
+    stored_media_features = {
+        "images_num": np.Nan,
+        "videos_num": np.NaN,
+        "music_num": np.NaN
+    }
+
+    table = pd.read_csv(filename)
+    table.columns = ["timestamp", "value"]
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            media_flag = row.value.split(" ")[-1]
+            if media_flag == "IMAGE":
+                stored_media_features["images_num"] = row.value.split(" ")[1]
+            elif media_flag == "VIDEO":
+                stored_media_features["videos_num"] = row.value.split(" ")[1]
+            else:
+                stored_media_features["music_num"] = row.value.split(" ")[1]
+
+    return stored_media_features
+
+
+def get_wifi_features(filename, start_time, end_time):
+    """
+
+    :param filename: input filename
+    :param start_time: start time of needed range
+    :param end_time: end time of needed range
+    :return: num of unique wifi bssid
+    """
+
+    unique_wifi_bssid = []
+
+    table = pd.read_csv(filename)
+    table.columns = ["timestamp", "value"]
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            values = row.value.split(" ")[1].replace("[", "").replace("]", "").split(",")
+            for value in values:
+                if value not in unique_wifi_bssid:
+                    unique_wifi_bssid.append(value)
+
+    return len(unique_wifi_bssid)
 
 
 def get_keystroke_log_features(filename, start_time, end_time):
