@@ -6,6 +6,10 @@ import pandas as pd
 import tools
 
 
+# todo read file once and give dataframe as an input
+# todo stop extracting features if ema_order changed
+
+
 def get_activity_recognition_features(filename, start_time, end_time):
     """
 
@@ -348,3 +352,188 @@ def get_sms_features(filename, start_time, end_time):
         sms_features["unique_contacts_num"] = len(unique_contacts)
 
     return sms_features
+
+
+def get_notifications_features(filename, start_time, end_time):
+    """
+
+    :param filename: input filename
+    :param start_time: start time of needed range
+    :param end_time: end time of needed range
+    :return: dict of notification features: arrived_num, clicked_num, min_decision_time, max_decision_time,
+    avg_decision_time, stdev_decision_time
+    """
+
+    notifications_features = {
+        "arrived_num": 0,
+        "clicked_num": 0,
+        "min_decision_time": 0,
+        "max_decision_time": 0,
+        "avg_decision_time": 0,
+        "stdev_decision_time": np.Nan
+    }
+
+    table = pd.read_csv(filename)
+    table.columns = ["timestamp", "value"]
+
+    decision_times = []
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            notification_flag = row.value.split(" ")[-1]
+            if notification_flag == "ARRIVED":
+                notifications_features["arrived_num"] += 1
+            elif notification_flag == "DECISION_TIME":
+                decision_times.append(int(row.value.split(" ")[1]) - int(row.value.split(" ")[0]))
+            elif notification_flag == "CLICKED":
+                notifications_features["clicked_num"] += 1
+
+    if len(decision_times) > 0:
+        notifications_features["min_decision_time"] = min(decision_times)
+        notifications_features["max_decision_time"] = max(decision_times)
+        notifications_features["avg_decision_time"] = statistics.mean(decision_times)
+
+        if len(decision_times) > 1:
+            notifications_features["stdev_decision_time"] = statistics.stdev(decision_times)
+
+    return notifications_features
+
+
+def get_screen_state_features(filename, start_time, end_time):
+    """
+
+    :param filename: input filename
+    :param start_time: start time of needed range
+    :param end_time: end time of needed range
+    :return: dict of screen features: on_num, off_num
+    """
+
+    screen_features = {
+        "on_num": 0,
+        "off_num": 0
+    }
+
+    table = pd.read_csv(filename)
+    table.columns = ["timestamp", "value"]
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            screen_state_flag = row.value.split(" ")[-1]
+            if screen_state_flag == "ON":
+                screen_features["on_num"] += 1
+            else:
+                screen_features["off_num"] += 1
+
+    return screen_features
+
+
+def get_unlock_state_features(filename, start_time, end_time):
+    """
+
+        :param filename: input filename
+        :param start_time: start time of needed range
+        :param end_time: end time of needed range
+        :return: dict of unlock state features: lock_num, unlock_num
+        """
+
+    unlock_state_features = {
+        "lock_num": 0,
+        "unlock_num": 0,
+    }
+
+    table = pd.read_csv(filename)
+    table.columns = ["timestamp", "value"]
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            unlock_state_flag = row.value.split(" ")[-1]
+            if unlock_state_flag == "LOCK":
+                unlock_state_features["lock_num"] += 1
+            else:
+                unlock_state_features["unlock_num"] += 1
+
+    return unlock_state_features
+
+
+def get_microphone_features(filename, start_time, end_time):
+    """
+
+    :param filename: input filename
+    :param start_time: start time of needed range
+    :param end_time: end time of needed range
+    :return: dict of microphone features: pitch_num, pitch_min, pitch_max, pitch_avg, pitch_stdev,
+    energy_min, energy_max, energy_avg, energy_stdev
+    """
+
+    microphone_features = {
+        "pitch_num": 0,
+        "pitch_min": np.Nan,
+        "pitch_max": np.Nan,
+        "pitch_avg": np.Nan,
+        "pitch_stdev": np.Nan,
+        "energy_min": np.Nan,
+        "energy_max": np.Nan,
+        "energy_avg": np.Nan,
+        "energy_stdev": np.Nan
+    }
+
+    energies = []
+    pitches = []
+
+    table = pd.read_csv(filename, header=False)
+    table.columns = ["timestamp", "value"]
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            microphone_flag = row.value.split(" ")[-1]
+            if microphone_flag == "ENERGY":
+                energies.append(float(row.value.split(" ")[1]))
+            else:
+                pitches.append(float(row.value.split(" ")[1]))
+
+    microphone_features["pitch_num"] = len(pitches)
+    if microphone_features["pitch_num"] > 0:
+        microphone_features["pitch_min"] = min(pitches)
+        microphone_features["pitch_max"] = max(pitches)
+        microphone_features["pitch_avg"] = statistics.mean(pitches)
+
+        if microphone_features["pitch_num"] > 1:
+            microphone_features["pitch_stdev"] = statistics.stdev(pitches)
+
+    if len(energies) > 0:
+        microphone_features["energy_min"] = min(energies)
+        microphone_features["energy_max"] = max(energies)
+        microphone_features["energy_avg"] = statistics.mean(energies)
+
+        if len(energies) > 1:
+            microphone_features["energy_stdev"] = statistics.stdev(energies)
+
+    return microphone_features
+
+
+def get_keystroke_log_features(filename, start_time, end_time):
+    """
+
+    :param filename: input filename
+    :param start_time: start time of needed range
+    :param end_time: end time of needed range
+    :return:
+    """
+
+    keystroke_features = {
+        "avg_interkey_delay": np.NaN,
+        "stdev_interkey_delay": np.NaN,
+        "backspace_ratio": np.NaN,
+        "autocorrect_num": 0
+    }
+
+    table = pd.read_csv(filename, header=False)
+    table.columns = ["timestamp", "value"]
