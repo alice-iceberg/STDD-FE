@@ -230,7 +230,7 @@ def extract_features(user_directory, user_id):
     unlock_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['UNLOCK_STATE']], low_memory=False)
     unlock_state_dataframe.columns = ["timestamp", "value"]
     unlock_state_dataframe.drop_duplicates()
-    microphone_dataframe = pd.read_csv(filenames[data_sources_with_ids['SOUND_DATA']], low_memory=False)
+    microphone_dataframe = pd.read_csv(filenames[data_sources_with_ids['SOUND_DATA']], low_memory=False, header=False)
     microphone_dataframe.columns = ["timestamp", "value"]
     microphone_dataframe.drop_duplicates()
     stored_media_dataframe = pd.read_csv(filenames[data_sources_with_ids['STORED_MEDIA']], low_memory=False)
