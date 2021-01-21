@@ -15,60 +15,46 @@ import tools
 # todo stop extracting features if ema_order changed
 
 
-def get_activity_recognition_features(filename, start_time, end_time):
+def get_activity_recognition_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of each activity frequency
     """
-    each_category_frequency = {
-        "still": 0,
-        "walking": 0,
-        "running": 0,
-        "on_bicycle": 0,
-        "in_vehicle": 0
+    activities_features = {
+        "still_freq": 0,
+        "walking_freq": 0,
+        "running_freq": 0,
+        "on_bicycle_freq": 0,
+        "in_vehicle_freq": 0
     }
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples():
         timestamp = int(row.timestamp)
-        activity_type = row.value.split(" ")[1]
 
         if tools.in_range(int(timestamp), start_time, end_time):
+            if row.value.split(" ")[-1] == 'EXIT':  # todo: solve the problem with only exit values at the beginning
+                activity_type = row.value.split(" ")[1]
+                if activity_type == 'STILL':
+                    activities_features['still_freq'] += 1
+                elif activity_type == 'WALKING':
+                    activities_features['walking_freq'] += 1
+                elif activity_type == 'RUNNING':
+                    activities_features['running_freq'] += 1
+                elif activity_type == 'ON_BICYCLE':
+                    activities_features['on_bicycle_freq'] += 1
+                elif activity_type == 'IN_VEHICLE':
+                    activities_features['in_vehicle_freq'] += 1
 
-            if activity_type == 'STILL':
-                each_category_frequency['still'] += 1
-            elif activity_type == 'WALKING':
-                each_category_frequency['walking'] += 1
-            elif activity_type == 'RUNNING':
-                each_category_frequency['running'] += 1
-            elif activity_type == 'ON_BICYCLE':
-                each_category_frequency['on_bicycle'] += 1
-            elif activity_type == 'IN_VEHICLE':
-                each_category_frequency['in_vehicle'] += 1
-
-    if each_category_frequency['still'] == 0:
-        each_category_frequency['still'] = 0
-    if each_category_frequency['walking'] == 0:
-        each_category_frequency['walking'] = 0
-    if each_category_frequency['running'] == 0:
-        each_category_frequency['running'] = 0
-    if each_category_frequency['on_bicycle'] == 0:
-        each_category_frequency['on_bicycle'] = 0
-    if each_category_frequency['in_vehicle'] == 0:
-        each_category_frequency['in_vehicle'] = 0
-
-    return each_category_frequency
+    return activities_features
 
 
-def get_app_usage_features(filename, start_time, end_time):
+def get_app_usage_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of duration of each category,
@@ -77,43 +63,39 @@ def get_app_usage_features(filename, start_time, end_time):
              number of unique apps
     """
 
-    each_category_duration = {
-        "Entertainment & Music": 0,
-        "Utilities": 0,
-        "Shopping": 0,
-        "Games & Comics": 0,
-        "Others": 0,
-        "Health & Wellness": 0,
-        "Social & Communication": 0,
-        "Education": 0,
-        "Travel": 0,
-        "Art & Design & Photo": 0,
-        "News & Magazine": 0,
-        "Food & Drink": 0,
-        "Unknown & Background": 0
+    app_usage_features = {
+        'app_entertainment_music_dur': 0,
+        'app_utilities_dur': 0,
+        'app_shopping_dur': 0,
+        'app_games_comics_dur': 0,
+        'app_others_dur': 0,
+        'app_health_wellness_dur': 0,
+        'app_social_communication_dur': 0,
+        'app_education_dur': 0,
+        'app_travel_dur': 0,
+        'app_art_design_photo_dur': 0,
+        'app_news_magazine_dur': 0,
+        'app_food_drink_dur': 0,
+        'app_unknown_background_dur': 0,
+        'app_entertainment_music_freq': 0,
+        'app_utilities_freq': 0,
+        'app_shopping_freq': 0,
+        'app_games_comics_freq': 0,
+        'app_others_freq': 0,
+        'app_health_wellness_freq': 0,
+        'app_social_communication_freq': 0,
+        'app_education_freq': 0,
+        'app_travel_freq': 0,
+        'app_art_design_photo_freq': 0,
+        'app_news_magazine_freq': 0,
+        'app_food_drink_freq': 0,
+        'app_unknown_background_freq': 0,
+
+        'apps_total_num': 0,
+        'apps_unique_num': 0
     }
 
-    each_category_frequency = {
-        "Entertainment & Music": 0,
-        "Utilities": 0,
-        "Shopping": 0,
-        "Games & Comics": 0,
-        "Others": 0,
-        "Health & Wellness": 0,
-        "Social & Communication": 0,
-        "Education": 0,
-        "Travel": 0,
-        "Art & Design & Photo": 0,
-        "News & Magazine": 0,
-        "Food & Drink": 0,
-        "Unknown & Background": 0
-    }
-
-    total_apps_counter = 0
     apps = []
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples():
         start = row.value.split(" ")[0]
@@ -121,7 +103,7 @@ def get_app_usage_features(filename, start_time, end_time):
         pckg_name = row.value.split(" ")[2]
         duration = int(end) - int(start)
         if tools.in_range(int(start), start_time, end_time) and duration > 0:
-            total_apps_counter += 1
+            app_usage_features['apps_total_num'] += 1
             if pckg_name not in apps:
                 apps.append(pckg_name)
 
@@ -132,68 +114,67 @@ def get_app_usage_features(filename, start_time, end_time):
                 tools.pckg_to_cat_map[pckg_name] = category
 
             if category == "Entertainment & Music":
-                each_category_duration['Entertainment & Music'] += duration
-                each_category_frequency['Entertainment & Music'] += 1
+                app_usage_features['app_entertainment_music_dur'] += duration
+                app_usage_features['app_entertainment_music_freq'] += 1
             elif category == "Utilities":
-                each_category_duration['Utilities'] += duration
-                each_category_frequency['Utilities'] += 1
+                app_usage_features['app_utilities_dur'] += duration
+                app_usage_features['app_utilities_freq'] += 1
             elif category == "Shopping":
-                each_category_duration['Shopping'] += duration
-                each_category_frequency['Shopping'] += 1
+                app_usage_features['app_shopping_dur'] += duration
+                app_usage_features['app_shopping_freq'] += 1
             elif category == "Games & Comics":
-                each_category_duration['Games & Comics'] += duration
-                each_category_frequency['Games & Comics'] += 1
+                app_usage_features['app_games_comics_dur'] += duration
+                app_usage_features['app_games_comics_freq'] += 1
             elif category == "Others":
-                each_category_duration['Others'] += duration
-                each_category_frequency['Others'] += 1
+                app_usage_features['app_others_dur'] += duration
+                app_usage_features['app_others_freq'] += 1
             elif category == "Health & Wellness":
-                each_category_duration['Health & Wellness'] += duration
-                each_category_frequency['Health & Wellness'] += 1
+                app_usage_features['app_health_wellness_dur'] += duration
+                app_usage_features['app_health_wellness_freq'] += 1
             elif category == "Social & Communication":
-                each_category_duration['Social & Communication'] += duration
-                each_category_frequency['Social & Communication'] += 1
+                app_usage_features['app_social_communication_dur'] += duration
+                app_usage_features['app_social_communication_freq'] += 1
             elif category == "Education":
-                each_category_duration['Education'] += duration
-                each_category_frequency['Education'] += 1
+                app_usage_features['app_education_dur'] += duration
+                app_usage_features['app_education_freq'] += 1
             elif category == "Travel":
-                each_category_duration['Travel'] += duration
-                each_category_frequency['Travel'] += 1
+                app_usage_features['app_travel_dur'] += duration
+                app_usage_features['app_travel_freq'] += 1
             elif category == "Art & Design & Photo":
-                each_category_duration['Art & Design & Photo'] += duration
-                each_category_frequency['Art & Design & Photo'] += 1
+                app_usage_features['app_art_design_photo_dur'] += duration
+                app_usage_features['app_art_design_photo_freq'] += 1
             elif category == "News & Magazine":
-                each_category_duration['News & Magazine'] += duration
-                each_category_frequency['News & Magazine'] += 1
+                app_usage_features['app_news_magazine_dur'] += duration
+                app_usage_features['app_news_magazine_freq'] += 1
             elif category == "Food & Drink":
-                each_category_duration['Food & Drink'] += duration
-                each_category_frequency['Food & Drink'] += 1
+                app_usage_features['app_food_drink_dur'] += duration
+                app_usage_features['app_food_drink_freq'] += 1
             elif category == "Unknown & Background":
-                each_category_duration['Unknown & Background'] += duration
-                each_category_frequency['Unknown & Background'] += 1
+                app_usage_features['app_unknown_background_dur'] += duration
+                app_usage_features['app_unknown_background_freq'] += 1
 
-    unique_apps_counter = len(apps)
-    return each_category_duration, each_category_frequency, total_apps_counter, unique_apps_counter
+    app_usage_features['apps_unique_num'] = len(apps)
+
+    return app_usage_features
 
 
-def get_light_features(filename, start_time, end_time):
+def get_light_features(table, start_time, end_time):
     """
 
-        :param filename: input filename
+        :param table: input dataframe
         :param start_time: start time of needed range
         :param end_time: end time of needed range
         :return: dict light features: min, max, avg, stddev, % of time when light is 0
         """
 
     light_features = {
-        'min': np.nan,
-        'max': np.nan,
-        'avg': np.nan,
-        'stddev': np.nan,
-        'dark_ratio': np.nan
+        'light_min': np.NaN,
+        'light_max': np.NaN,
+        'light_avg': np.NaN,
+        'light_stddev': np.NaN,
+        'light_dark_ratio': np.NaN
     }
     light_data = []
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -202,29 +183,27 @@ def get_light_features(filename, start_time, end_time):
             light_data.append(int(value))
 
     if light_data.__len__() > 0:
-        light_features['min'] = min(light_data)
-        light_features['max'] = max(light_data)
-        light_features['avg'] = statistics.mean(light_data)
-        light_features['dark_ratio'] = light_data.count(0) / len(light_data)
+        light_features['light_min'] = min(light_data)
+        light_features['light_max'] = max(light_data)
+        light_features['light_avg'] = statistics.mean(light_data)
+        light_features['light_dark_ratio'] = light_data.count(0) / len(light_data)
 
         if light_data.__len__() > 1:
-            light_features['stddev'] = statistics.stdev(light_data)
+            light_features['light_stddev'] = statistics.stdev(light_data)
 
     return light_features
 
 
-def get_signif_motion_features(filename, start_time, end_time):
+def get_signif_motion_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: number of times significant motion sensor is triggered
     """
 
     signif_motion_freq = 0
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -234,17 +213,15 @@ def get_signif_motion_features(filename, start_time, end_time):
     return signif_motion_freq
 
 
-def get_step_detector_features(filename, start_time, end_time):
+def get_step_detector_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: number of steps
     """
     num_of_steps = 0
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -254,10 +231,10 @@ def get_step_detector_features(filename, start_time, end_time):
     return num_of_steps
 
 
-def get_calls_features(filename, start_time, end_time):
+def get_calls_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of call features: "missed_num", "in_num", "out_num", "min_out_dur", "max_out_dur",
@@ -265,21 +242,18 @@ def get_calls_features(filename, start_time, end_time):
     """
 
     calls_features = {
-        "missed_num": 0,
-        "in_num": 0,
-        "out_num": 0,
-        "min_out_dur": 0,
-        "max_out_dur": 0,
-        "avg_out_dur": 0,
-        "total_out_dur": 0,
-        "min_in_dur": 0,
-        "max_in_dur": 0,
-        "avg_in_dur": 0,
-        "total_in_dur": 0
+        'calls_missed_num': 0,
+        'calls_in_num': 0,
+        'calls_out_num': 0,
+        'calls_min_out_dur': 0,
+        'calls_max_out_dur': 0,
+        'calls_avg_out_dur': 0,
+        'calls_total_out_dur': 0,
+        'calls_min_in_dur': 0,
+        'calls_max_in_dur': 0,
+        'calls_avg_in_dur': 0,
+        'calls_total_in_dur': 0
     }
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     in_calls_dur = []
     out_calls_dur = []
@@ -293,56 +267,53 @@ def get_calls_features(filename, start_time, end_time):
         if tools.in_range(int(timestamp), start_time, end_time):
             if call_type == "IN":
                 in_calls_dur.append(int(end) - int(start))
-                calls_features["in_num"] += 1
+                calls_features['calls_in_num'] += 1
             elif call_type == "OUT":
                 out_calls_dur.append(int(end) - int(start))
-                calls_features["out_num"] += 1
+                calls_features['calls_out_num'] += 1
             else:
-                calls_features["missed_num"] += 1
+                calls_features['calls_missed_num'] += 1
 
-    if calls_features["out_num"] > 0:
-        calls_features["min_out_dur"] = min(out_calls_dur)
-        calls_features["max_out_dur"] = max(out_calls_dur)
-        calls_features["avg_out_dur"] = statistics.mean(out_calls_dur)
-        calls_features["total_out_dur"] = sum(out_calls_dur)
+    if calls_features['calls_out_num'] > 0:
+        calls_features['calls_min_out_dur'] = min(out_calls_dur)
+        calls_features['calls_max_out_dur'] = max(out_calls_dur)
+        calls_features['calls_avg_out_dur'] = statistics.mean(out_calls_dur)
+        calls_features['calls_total_out_dur'] = sum(out_calls_dur)
 
-    if calls_features["in_num"] > 0:
-        calls_features["min_in_dur"] = min(in_calls_dur)
-        calls_features["max_in_dur"] = max(in_calls_dur)
-        calls_features["avg_in_dur"] = statistics.mean(in_calls_dur)
-        calls_features["total_in_dur"] = sum(in_calls_dur)
+    if calls_features['calls_in_num'] > 0:
+        calls_features['calls_min_in_dur'] = min(in_calls_dur)
+        calls_features['calls_max_in_dur'] = max(in_calls_dur)
+        calls_features['calls_avg_in_dur'] = statistics.mean(in_calls_dur)
+        calls_features['calls_total_in_dur'] = sum(in_calls_dur)
 
     return calls_features
 
 
-def get_sms_features(filename, start_time, end_time):
+def get_sms_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of sms features: min_chars, max_chars, avg_chars, unique_contacts_num, total_num
     """
 
     sms_features = {
-        "min_chars": 0,
-        "max_chars": 0,
-        "avg_chars": 0,
-        "unique_contacts_num": 0,
-        "total_num": 0
+        'sms_min_chars': 0,
+        'sms_max_chars': 0,
+        'sms_avg_chars': 0,
+        'sms_unique_contacts_num': 0,
+        'sms_total_num': 0
     }
 
     unique_contacts = []
     chars_arr = []
 
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
-
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
 
         if tools.in_range(int(timestamp), start_time, end_time):
-            sms_features["total_num"] += 1
+            sms_features['sms_total_num'] += 1
             contact = row.value.split(" ")[1]
             chars = row.value.split(" ")[2]
             chars_arr.append(chars)
@@ -350,19 +321,19 @@ def get_sms_features(filename, start_time, end_time):
             if contact not in unique_contacts:
                 unique_contacts.append(contact)
 
-    if sms_features["total_num"] > 0:
-        sms_features["min_chars"] = min(chars_arr)
-        sms_features["max_chars"] = max(chars_arr)
-        sms_features["avg_chars"] = statistics.mean(chars_arr)
-        sms_features["unique_contacts_num"] = len(unique_contacts)
+    if sms_features['sms_total_num'] > 0:
+        sms_features['sms_min_chars'] = min(chars_arr)
+        sms_features['sms_max_chars'] = max(chars_arr)
+        sms_features['sms_avg_chars'] = statistics.mean(chars_arr)
+        sms_features['sms_unique_contacts_num'] = len(unique_contacts)
 
     return sms_features
 
 
-def get_notifications_features(filename, start_time, end_time):
+def get_notifications_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of notification features: arrived_num, clicked_num, min_decision_time, max_decision_time,
@@ -370,16 +341,13 @@ def get_notifications_features(filename, start_time, end_time):
     """
 
     notifications_features = {
-        "arrived_num": 0,
-        "clicked_num": 0,
-        "min_decision_time": 0,
-        "max_decision_time": 0,
-        "avg_decision_time": 0,
-        "stdev_decision_time": np.Nan
+        "notif_arrived_num": 0,
+        "notif_clicked_num": 0,
+        "notif_min_dec_time": np.NaN,
+        "notif_max_dec_time": np.NaN,
+        "notif_avg_dec_time": np.NaN,
+        "notif_stdev_dec_time": np.NaN
     }
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     decision_times = []
 
@@ -389,39 +357,36 @@ def get_notifications_features(filename, start_time, end_time):
         if tools.in_range(int(timestamp), start_time, end_time):
             notification_flag = row.value.split(" ")[-1]
             if notification_flag == "ARRIVED":
-                notifications_features["arrived_num"] += 1
+                notifications_features["notif_arrived_num"] += 1
             elif notification_flag == "DECISION_TIME":
                 decision_times.append(int(row.value.split(" ")[1]) - int(row.value.split(" ")[0]))
             elif notification_flag == "CLICKED":
-                notifications_features["clicked_num"] += 1
+                notifications_features["notif_clicked_num"] += 1
 
     if len(decision_times) > 0:
-        notifications_features["min_decision_time"] = min(decision_times)
-        notifications_features["max_decision_time"] = max(decision_times)
-        notifications_features["avg_decision_time"] = statistics.mean(decision_times)
+        notifications_features["notif_min_dec_time"] = min(decision_times)
+        notifications_features["notif_max_dec_time"] = max(decision_times)
+        notifications_features["notif_avg_dec_time"] = statistics.mean(decision_times)
 
         if len(decision_times) > 1:
-            notifications_features["stdev_decision_time"] = statistics.stdev(decision_times)
+            notifications_features["notif_stdev_dec_time"] = statistics.stdev(decision_times)
 
     return notifications_features
 
 
-def get_screen_state_features(filename, start_time, end_time):
+def get_screen_state_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input table
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of screen features: on_num, off_num
     """
 
     screen_features = {
-        "on_num": 0,
-        "off_num": 0
+        "screen_on_freq": 0,
+        "screen_off_freq": 0
     }
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -429,30 +394,26 @@ def get_screen_state_features(filename, start_time, end_time):
         if tools.in_range(int(timestamp), start_time, end_time):
             screen_state_flag = row.value.split(" ")[-1]
             if screen_state_flag == "ON":
-                screen_features["on_num"] += 1
+                screen_features["screen_on_freq"] += 1
             else:
-                screen_features["off_num"] += 1
+                screen_features["screen_off_freq"] += 1
 
     return screen_features
 
 
-def get_unlock_state_features(filename, start_time, end_time):
+def get_unlock_state_features(table, start_time, end_time):
     """
 
-        :param filename: input filename
+        :param table: input dataframe
         :param start_time: start time of needed range
         :param end_time: end time of needed range
         :return: dict of unlock state features: lock_num, unlock_num, phone_usage time
         """
 
     unlock_state_features = {
-        "lock_num": 0,
-        "unlock_num": 0,
-        "phone_usage": np.Nan
+        "lock_freq": 0,
+        "unlock_freq": 0,
     }
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -460,17 +421,17 @@ def get_unlock_state_features(filename, start_time, end_time):
         if tools.in_range(int(timestamp), start_time, end_time):
             unlock_state_flag = row.value.split(" ")[-1]
             if unlock_state_flag == "LOCK":
-                unlock_state_features["lock_num"] += 1
+                unlock_state_features["lock_freq"] += 1
             else:
-                unlock_state_features["unlock_num"] += 1
+                unlock_state_features["unlock_freq"] += 1
 
     return unlock_state_features
 
 
-def get_microphone_features(filename, start_time, end_time):
+def get_microphone_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of microphone features: pitch_num, pitch_min, pitch_max, pitch_avg, pitch_stdev,
@@ -479,21 +440,18 @@ def get_microphone_features(filename, start_time, end_time):
 
     microphone_features = {
         "pitch_num": 0,
-        "pitch_min": np.Nan,
-        "pitch_max": np.Nan,
-        "pitch_avg": np.Nan,
-        "pitch_stdev": np.Nan,
-        "energy_min": np.Nan,
-        "energy_max": np.Nan,
-        "energy_avg": np.Nan,
-        "energy_stdev": np.Nan
+        "pitch_min": np.NaN,
+        "pitch_max": np.NaN,
+        "pitch_avg": np.NaN,
+        "pitch_stdev": np.NaN,
+        "sound_energy_min": np.NaN,
+        "sound_energy_max": np.NaN,
+        "sound_energy_avg": np.NaN,
+        "sound_energy_stdev": np.NaN
     }
 
     energies = []
     pitches = []
-
-    table = pd.read_csv(filename, header=False)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -515,33 +473,30 @@ def get_microphone_features(filename, start_time, end_time):
             microphone_features["pitch_stdev"] = statistics.stdev(pitches)
 
     if len(energies) > 0:
-        microphone_features["energy_min"] = min(energies)
-        microphone_features["energy_max"] = max(energies)
-        microphone_features["energy_avg"] = statistics.mean(energies)
+        microphone_features["sound_energy_min"] = min(energies)
+        microphone_features["sound_energy_max"] = max(energies)
+        microphone_features["sound_energy_avg"] = statistics.mean(energies)
 
         if len(energies) > 1:
-            microphone_features["energy_stdev"] = statistics.stdev(energies)
+            microphone_features["sound_energy_stdev"] = statistics.stdev(energies)
 
     return microphone_features
 
 
-def get_stored_media_features(filename, start_time, end_time):
+def get_stored_media_features(table, start_time, end_time):
     """
 
-        :param filename: input filename
+        :param table: input dataframe
         :param start_time: start time of needed range
         :param end_time: end time of needed range
         :return: dict of stored media features: images_num, videos_num, music_num
         """
 
     stored_media_features = {
-        "images_num": np.Nan,
+        "images_num": np.NaN,
         "videos_num": np.NaN,
         "music_num": np.NaN
     }
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -558,19 +513,16 @@ def get_stored_media_features(filename, start_time, end_time):
     return stored_media_features
 
 
-def get_wifi_features(filename, start_time, end_time):
+def get_wifi_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: num of unique wifi bssid
     """
 
     unique_wifi_bssid = []
-
-    table = pd.read_csv(filename)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
@@ -584,19 +536,19 @@ def get_wifi_features(filename, start_time, end_time):
     return len(unique_wifi_bssid)
 
 
-def get_typing_features(filename, start_time, end_time):
+def get_typing_features(table, start_time, end_time):
     """
 
-    :param filename: input filename
+    :param table: input dataframe
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return: dict of typing features: typing_num, unique_apps_num, typing_min, typing_max, typing_avg, typing_stdev
     """
 
     typing_features = {
-        "typing_num": 0,
-        "unique_apps_num": 0,
-        "typing_min": np.Nan,
+        "typing_freq": 0,
+        "typing_unique_apps_num": 0,
+        "typing_min": np.NaN,
         "typing_max": np.NaN,
         "typing_avg": np.NaN,
         "typing_stdev": np.NaN
@@ -604,9 +556,6 @@ def get_typing_features(filename, start_time, end_time):
 
     typing_durations = []
     unique_apps = []
-
-    table = pd.read_csv(filename, header=False)
-    table.columns = ["timestamp", "value"]
 
     for row in table.itertuples(index=False):
         timestamp = row.value.split(" ")[0]
@@ -616,23 +565,35 @@ def get_typing_features(filename, start_time, end_time):
             if row.value.split(" ")[-1] not in unique_apps:
                 unique_apps.append(row.value.split(" ")[-1])
 
-    typing_features["typing_num"] = len(typing_durations)
-    typing_features["unique_apps_num"] = len(unique_apps)
+    typing_features["typing_freq"] = len(typing_durations)
+    typing_features["typing_unique_apps_num"] = len(unique_apps)
 
-    if typing_features["typing_num"] > 0:
+    if typing_features["typing_freq"] > 0:
         typing_features["typing_min"] = min(typing_durations)
         typing_features["typing_max"] = max(typing_durations)
         typing_features["typing_avg"] = statistics.mean(typing_durations)
 
-        if typing_features["typing_num"] > 1:
+        if typing_features["typing_freq"] > 1:
             typing_features["typing_stdev"] = statistics.stdev(typing_durations)
 
 
-def get_locations_features(filename, manual_locations_filename, start_time, end_time):
+def get_calendar_features(table, start_time, end_time):
+    # todo: recheck how many calendar records are for each EMA
+    num_events = np.NaN
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+        if tools.in_range(int(timestamp), start_time, end_time):
+            num_events = row.value.split(" ")[1]
+
+    return num_events
+
+
+def get_locations_features(table, manual_locations_table, start_time, end_time):
     """
 
-    :param manual_locations_filename:
-    :param filename: input filename
+    :param manual_locations_table: input dataframe (manual locations)
+    :param table: input dataframe (locations gps)
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return:
@@ -665,7 +626,6 @@ def get_locations_features(filename, manual_locations_filename, start_time, end_
     total_distance_travelled_per_cluster = []
     num_clusters = 1
 
-    table = pd.read_csv(filename, delimiter=',', names=['timestamp', 'value'])
     table = table['value'].str.split(' ', n=5, expand=True)
     table.columns = ['timestamp', 'lat', 'lng', 'speed', 'accuracy', 'altitude']
 
@@ -725,7 +685,7 @@ def get_locations_features(filename, manual_locations_filename, start_time, end_
             no_outliers = False
 
     if no_outliers:
-        manual_locations = tools.get_manual_locations(manual_locations_filename)
+        manual_locations = tools.get_manual_locations(manual_locations_table)
         home_cluster_number = kmeans.predict(
             [manual_locations["home"]])
         if manual_locations["work"] != np.NaN:
@@ -848,17 +808,14 @@ def get_locations_features(filename, manual_locations_filename, start_time, end_
                                                                                    start_time, end_time)
 
 
-def get_sleep_duration(filename):
+def get_sleep_duration(table):
     # todo revisit, idea is to save dict with dates as key
 
     """
 
-    :param filename: input filename
+    :param table: input dataframe (app usage)
     :return: dict of sleep durations
     """
-
-    table = pd.read_csv(filename, low_memory=False)
-    table.columns = ["timestamp", "value"]
     # filtering timestamps (leave only 9pm ~ 12pm)
     filtered_table = pd.DataFrame(columns=['timestamp', 'value'])
 

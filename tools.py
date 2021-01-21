@@ -56,6 +56,15 @@ def from_timestamp_to_hour(timestamp):
     return hour
 
 
+def is_weekday(timestamp):
+    timestamp = int(timestamp) / 1000
+    dt = datetime.fromtimestamp(int(timestamp))
+    if dt.weekday() == 5 or dt.weekday() == 6:
+        return 0
+    else:
+        return 1
+
+
 def from_timestamp_to_ema_order(timestamp):
     # EMA1 : 22:00:00 - 09:59:59
     # EMA2 : 10:00:00 - 13:59:59
@@ -76,6 +85,22 @@ def from_timestamp_to_ema_order(timestamp):
         ema_order = 4
 
     return ema_order
+
+
+def get_ema_time_range(ema_timestamp):
+    ema_time_range = {
+        "time_from": np.NaN,
+        "time_to": np.NaN
+    }
+
+    ema_order = from_timestamp_to_ema_order(ema_timestamp)
+    ema_time_range["time_to"] = ema_timestamp
+    if ema_order == 1:
+        ema_time_range["time_from"] = ema_timestamp - 3 * 14400000  # 12 hours before EMA
+    else:
+        ema_time_range["time_from"] = ema_timestamp - 14400000  # 4 hours before EMA
+
+    return ema_time_range
 
 
 def get_google_category(app_package):
@@ -104,7 +129,7 @@ def get_google_category(app_package):
         return grouped_category
 
 
-def get_manual_locations(filename):
+def get_manual_locations(dataframe):
     locations = {
         "home": np.NaN,
         "work": np.NaN,
@@ -113,7 +138,6 @@ def get_manual_locations(filename):
         "additional": np.NaN
     }
 
-    dataframe = pd.read_csv(filename, delimiter=',', names=['timestamp', 'value'])
     dataframe = dataframe['value'].str.split(' ', n=3, expand=True)
     dataframe.columns = ['timestamp', 'location', 'lat', 'lng']
 
