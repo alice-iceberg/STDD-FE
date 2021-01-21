@@ -1,7 +1,12 @@
+import math
 import statistics
+from collections import Counter
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+from haversine import haversine, Unit
+from sklearn.cluster import KMeans
 
 import tools
 
@@ -579,21 +584,313 @@ def get_wifi_features(filename, start_time, end_time):
     return len(unique_wifi_bssid)
 
 
-def get_keystroke_log_features(filename, start_time, end_time):
+def get_typing_features(filename, start_time, end_time):
     """
 
+    :param filename: input filename
+    :param start_time: start time of needed range
+    :param end_time: end time of needed range
+    :return: dict of typing features: typing_num, unique_apps_num, typing_min, typing_max, typing_avg, typing_stdev
+    """
+
+    typing_features = {
+        "typing_num": 0,
+        "unique_apps_num": 0,
+        "typing_min": np.Nan,
+        "typing_max": np.NaN,
+        "typing_avg": np.NaN,
+        "typing_stdev": np.NaN
+    }
+
+    typing_durations = []
+    unique_apps = []
+
+    table = pd.read_csv(filename, header=False)
+    table.columns = ["timestamp", "value"]
+
+    for row in table.itertuples(index=False):
+        timestamp = row.value.split(" ")[0]
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            typing_durations.append(int(row.value.split(" ")[1]) - int(row.value.split(" ")[0]))
+            if row.value.split(" ")[-1] not in unique_apps:
+                unique_apps.append(row.value.split(" ")[-1])
+
+    typing_features["typing_num"] = len(typing_durations)
+    typing_features["unique_apps_num"] = len(unique_apps)
+
+    if typing_features["typing_num"] > 0:
+        typing_features["typing_min"] = min(typing_durations)
+        typing_features["typing_max"] = max(typing_durations)
+        typing_features["typing_avg"] = statistics.mean(typing_durations)
+
+        if typing_features["typing_num"] > 1:
+            typing_features["typing_stdev"] = statistics.stdev(typing_durations)
+
+
+def get_locations_features(filename, manual_locations_filename, start_time, end_time):
+    """
+
+    :param manual_locations_filename:
     :param filename: input filename
     :param start_time: start time of needed range
     :param end_time: end time of needed range
     :return:
     """
 
-    keystroke_features = {
-        "avg_interkey_delay": np.NaN,
-        "stdev_interkey_delay": np.NaN,
-        "backspace_ratio": np.NaN,
-        "autocorrect_num": 0
+    global no_outliers, manual_locations, work_cluster_number, univ_cluster_number
+    location_features = {
+        "places_num": np.NaN,
+        "dur_at_place_max": np.NaN,
+        "dur_at_place_min": np.NaN,
+        "dur_at_place_avg": np.NaN,
+        "dur_at_place_stdev": np.NaN,
+        "entropy": np.NaN,
+        "normalized_entropy": np.NaN,
+        "location_variance": np.NaN,
+        "duration_at_home": np.NaN,
+        "duration_at_work/study": np.NaN,
+        "distance_btw_locations_max": np.NaN,
+        "distance_from_home_max": np.NaN,
+        "distance_travelled_total": np.NaN
     }
 
-    table = pd.read_csv(filename, header=False)
+    MIN_POINTS_PER_CLUSTER = 4  # 4 elements is 20 minutes
+    MAX_DISTANCE_IN_CLUSTER = 100  # in meters
+
+    lat_lng = []
+    timestamps = []
+    max_indices = []
+    distances = []
+    total_distance_travelled_per_cluster = []
+    num_clusters = 1
+
+    table = pd.read_csv(filename, delimiter=',', names=['timestamp', 'value'])
+    table = table['value'].str.split(' ', n=5, expand=True)
+    table.columns = ['timestamp', 'lat', 'lng', 'speed', 'accuracy', 'altitude']
+
+    for row in table.itertuples(index=False):
+        timestamp = row.timestamp
+
+        if tools.in_range(int(timestamp), start_time, end_time):
+            lat_lng.append([float(row.lat), float(row.lng)])
+            timestamps.append(timestamp)
+
+    lat_lng = np.array(lat_lng).astype('float64')
+    timestamps = np.array(timestamps)
+
+    location_features["location_variance"] = lat_lng.var()
+
+    while True:
+        temp = num_clusters
+        kmeans = KMeans(n_clusters=num_clusters, init='k-means++', random_state=42)
+        y_label = kmeans.fit_predict(lat_lng)
+
+        # squared distance to cluster center
+        X_dist = kmeans.transform(lat_lng) ** 2
+
+        for label in np.unique(kmeans.labels_):
+            X_label_indices = np.where(y_label == label)[0]
+            max_label_idx = X_label_indices[np.argmax(X_dist[y_label == label].sum(axis=1))]
+            max_indices.append(max_label_idx)
+
+        farthest_points = (lat_lng[max_indices])
+        centroids = kmeans.cluster_centers_
+
+        for i, centroid in enumerate(centroids):
+            distances.append(haversine(farthest_points[i], centroid, unit=Unit.METERS))
+            # generate new cluster if distance is more than a threshold
+            if distances[i] > MAX_DISTANCE_IN_CLUSTER:
+                temp = num_clusters + 1
+
+        total_distance_travelled_per_cluster.append(sum(distances))
+        elements_per_cluster = Counter(kmeans.labels_)
+        if elements_per_cluster[0] < MIN_POINTS_PER_CLUSTER and temp > 1:
+            break
+        if temp == num_clusters:
+            outlier_label = tools.get_outlier_cluster(kmeans, MIN_POINTS_PER_CLUSTER)
+            if outlier_label == -1:  # no outliers detected
+                no_outliers = True
+                location_features["places_num"] = num_clusters
+                break
+            else:
+                no_outliers = False
+                indices = np.where(y_label == outlier_label)[0]
+                lat_lng = tools.remove_outlier_cluster(lat_lng, indices)
+        elif temp > num_clusters:
+            num_clusters = temp
+            no_outliers = True  # TODO: check should be true or false
+        else:
+            print("Exception occurred: temp < num_clusters")
+            no_outliers = False
+
+    if no_outliers:
+        manual_locations = tools.get_manual_locations(manual_locations_filename)
+        home_cluster_number = kmeans.predict(
+            [manual_locations["home"]])
+        if manual_locations["work"] != np.NaN:
+            work_cluster_number = kmeans.predict(
+                [manual_locations["work"]])
+        if manual_locations["univ"] != np.NaN:
+            univ_cluster_number = kmeans.predict(
+                [manual_locations["univ"]])
+
+        # region Time duration per location cluster
+        n = num_clusters
+        max_timestamp = timestamps[0]
+        min_timestamp = timestamps[0]
+        time_duration = 0
+        time_duration_per_cluster = []  # starts with last cluster
+        current_cluster = num_clusters - 1
+        elements_per_cluster = Counter(kmeans.labels_)
+
+        while True:
+            elems = np.where(y_label == current_cluster)[0]
+
+            for j, value in enumerate(elems):
+                if j == 0:
+                    min_timestamp = timestamps[value]
+                elif (j == elements_per_cluster[current_cluster] - 1) and (
+                        value - elems[j - 1] > 1):  # if element is one and the last
+                    break
+                elif (value - elems[j - 1] > 1) and (elems[j + 1] - value > 1):  # if element is one
+                    continue
+                elif j == elements_per_cluster[current_cluster] - 1:  # last element of the cluster reached
+                    max_timestamp = timestamps[value]
+                    time_duration = time_duration + abs(max_timestamp - min_timestamp)
+
+                elif j > 0 and abs(elems[j - 1] - value) > 1:
+                    max_timestamp = timestamps[elems[j - 1]]
+
+                    if abs(max_timestamp - min_timestamp) != 0:
+                        time_duration = time_duration + abs(max_timestamp - min_timestamp)
+                        min_timestamp = timestamps[value]
+            time_duration_per_cluster.append(time_duration)
+            current_cluster = current_cluster - 1  # move to the previous cluster, because started from last
+
+            if current_cluster == -1:  # no clusters remained
+                break
+
+        location_features["dur_at_place_min"] = min(time_duration_per_cluster)
+        location_features["dur_at_place_max"] = max(time_duration_per_cluster)
+        location_features["dur_at_place_avg"] = statistics.mean(time_duration_per_cluster)
+
+        location_features["distance_travelled_total"] = sum(total_distance_travelled_per_cluster)
+        location_features["distance_btw_locations_max"] = max(total_distance_travelled_per_cluster)
+
+        if home_cluster_number == 0:
+            location_features["duration_at_home"] = time_duration_per_cluster[-1]  # last index
+        elif home_cluster_number > 0:
+            home_cluster_index_from_end = -home_cluster_number - 1
+            location_features["duration_at_home"] = time_duration_per_cluster[int(
+                home_cluster_index_from_end)]
+
+        if manual_locations["work"] != np.NaN and manual_locations["univ"] != np.NaN:
+            location_features["duration_at_work/study"] = 0
+            if work_cluster_number == 0:
+                location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
+            elif work_cluster_number > 0:
+                work_cluster_index_from_end = -work_cluster_number - 1
+                location_features["duration_at_work/study"] += time_duration_per_cluster[int(
+                    work_cluster_index_from_end)]
+            if univ_cluster_number == 0:
+                location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
+            elif univ_cluster_number > 0:
+                univ_cluster_index_from_end = -univ_cluster_number - 1
+                location_features["duration_at_work/study"] += time_duration_per_cluster[int(
+                    univ_cluster_index_from_end)]
+
+        elif manual_locations["work"] != np.NaN and manual_locations["univ"] == np.NaN:
+            if work_cluster_number == 0:
+                location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
+            elif work_cluster_number > 0:
+                work_cluster_index_from_end = -work_cluster_number - 1
+                location_features["duration_at_work/study"] = time_duration_per_cluster[int(
+                    work_cluster_index_from_end)]
+
+        elif manual_locations["work"] == np.NaN and manual_locations["univ"] != np.NaN:
+            if univ_cluster_number == 0:
+                location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
+            elif univ_cluster_number > 0:
+                univ_cluster_index_from_end = -univ_cluster_number - 1
+                location_features["duration_at_work/study"] = time_duration_per_cluster[int(
+                    univ_cluster_index_from_end)]
+
+        # endregion
+
+        # region Location entropy
+        percentage_per_cluster = []  # starting from the last
+        log_percentage_per_cluster = []
+        total_time = sum(time_duration_per_cluster)
+        entropy = 0
+
+        for i in range(0, time_duration_per_cluster.__len__()):
+            percentage_per_cluster.append((time_duration_per_cluster[i] / total_time))
+            if percentage_per_cluster[i] != 0:
+                log_percentage_per_cluster.append(np.math.log(percentage_per_cluster[i], 10))  # log10P
+                entropy += percentage_per_cluster[i] * log_percentage_per_cluster[
+                    i]
+            else:
+                log_percentage_per_cluster.append(0)
+                entropy += 0
+                n -= 1
+
+        location_features["entropy"] = abs(entropy)
+        # endregion
+
+        # region normalized entropy
+        log_num_clusters = math.log(n, 10)
+        if log_num_clusters != 0:
+            location_features["normalized_entropy"] = location_features["entropy"] / log_num_clusters
+        # endregion
+
+    location_features["distance_from_home_max"] = tools.get_max_distance_from_home(manual_locations["home"], table,
+                                                                                   start_time, end_time)
+
+
+def get_sleep_duration(filename):
+    # todo revisit, idea is to save dict with dates as key
+
+    """
+
+    :param filename: input filename
+    :return: dict of sleep durations
+    """
+
+    table = pd.read_csv(filename, low_memory=False)
     table.columns = ["timestamp", "value"]
+    # filtering timestamps (leave only 9pm ~ 12pm)
+    filtered_table = pd.DataFrame(columns=['timestamp', 'value'])
+
+    for row in table.itertuples(index=False):
+        timestamp = int(table.timestamp)
+        if tools.in_range_of_sleep_hours(timestamp):
+            filtered_table = filtered_table.append({'timestamp': row.timestamp, 'value': row.value}, ignore_index=True)
+
+    timestamps = np.array(filtered_table['timestamp'])
+    sleep_durations = {}
+    sub_timestamps = []
+    today = datetime.fromtimestamp(int(timestamps[0]) / 1000).date()
+    tomorrow = today + timedelta(days=1)
+
+    for timestamp in timestamps:
+        if (tools.from_timestamp_to_hour(timestamp) >= 21 and datetime.fromtimestamp(
+                int(timestamp)).date() == today) or (
+                tools.from_timestamp_to_hour(timestamp) < 12 and datetime.fromtimestamp(int(timestamp)).date()
+                == tomorrow):
+            sub_timestamps.append(timestamp)
+        else:
+            try:
+                sleep_durations[today] = round((np.diff(np.array(sub_timestamps)).max()) / 60000)
+                sub_timestamps = []
+                today = tomorrow
+                tomorrow = today + timedelta(days=1)
+                print(today, tomorrow)
+                sub_timestamps.append(timestamp)
+            except ValueError:
+                pass
+
+    print('Number of days: ', len(sleep_durations))
+    print(sleep_durations)
+
+    return sleep_durations
