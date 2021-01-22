@@ -472,8 +472,8 @@ def extract_features(user_directory, user_id):
         # endregion
 
         output_table = output_table.append(extracted_features, ignore_index=True)
-        output_table.to_csv('works.csv')
-        return f'Feature extraction finished for {user_directory}'
+    output_table.to_csv('works.csv')
+    return f'Feature extraction finished for {user_directory}'
 
 
 def main():

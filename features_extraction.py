@@ -315,7 +315,7 @@ def get_sms_features(table, start_time, end_time):
         if tools.in_range(int(timestamp), start_time, end_time):
             sms_features['sms_total_num'] += 1
             contact = row.value.split(" ")[1]
-            chars = row.value.split(" ")[2]
+            chars = int(row.value.split(" ")[2])
             chars_arr.append(chars)
 
             if contact not in unique_contacts:
@@ -601,7 +601,6 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
     :return:
     """
 
-    global no_outliers, manual_locations, work_cluster_number, univ_cluster_number
     location_features = {
         'places_num': np.NaN,
         "dur_at_place_max": np.NaN,
