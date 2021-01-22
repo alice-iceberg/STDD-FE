@@ -1,11 +1,9 @@
-import concurrent.futures
-import os
 import time
 
 import pandas as pd
 
 import features_extraction
-from tools import create_filenames, get_ema_time_range, is_weekday
+from tools import create_filenames, get_ema_time_range, is_weekday, remove_duplicate_ema
 
 USER_ID = 89
 directory = 'data_for_fe'
@@ -14,33 +12,33 @@ data_sources = [1, 4, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 2
 user_ids = [86, 87, 89, 90, 91, 92, 93, 100, 102, 125, 119, 110]
 
 user_ids_with_gender = {
-    '86': 'F',
-    '87': 'M',
-    '89': 'F',
-    '90': 'M',
-    '91': 'M',
-    '92': 'M',
-    '93': 'F',
-    '100': 'M',
-    '102': 'F',
-    '125': 'F',
-    '119': 'M',
-    '110': 'F'
+    86: 'F',
+    87: 'M',
+    89: 'F',
+    90: 'M',
+    91: 'M',
+    92: 'M',
+    93: 'F',
+    100: 'M',
+    102: 'F',
+    125: 'F',
+    119: 'M',
+    110: 'F'
 
 }
 user_ids_with_depression_group = {
-    '86': 'B',
-    '87': 'A',
-    '89': 'A',
-    '90': 'C',
-    '91': 'A',
-    '92': 'B',
-    '93': 'B',
-    '100': 'B',
-    '102': 'A',
-    '125': 'C',
-    '119': 'C',
-    '110': 'C'
+    86: 'B',
+    87: 'A',
+    89: 'A',
+    90: 'C',
+    91: 'A',
+    92: 'B',
+    93: 'B',
+    100: 'B',
+    102: 'A',
+    125: 'C',
+    119: 'C',
+    110: 'C'
 
 }
 
@@ -191,118 +189,165 @@ def extract_features(user_directory, user_id):
     filenames = create_filenames(user_id, data_sources)
     output_table = pd.DataFrame(columns=output_columns)
     print(f'Feature extraction started for {user_directory}')
-    ema_filename = f'{user_directory}/{user_id}_11.csv'
 
-    ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'])
+    ema_filename = f'{user_directory}/{user_id}_11.csv'
+    remove_duplicate_ema(ema_filename)
+
+    ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
     ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
     ema_table.columns = ['timestamp', 'ema_order', 'phq1', 'phq2', 'phq3', 'phq4', 'phq5', 'phq6', 'phq7', 'phq8',
                          'phq9']
 
     # region creating dataframes
-    activities_dataframe = pd.read_csv(filenames[data_sources_with_ids['ACTIVITY_RECOGNITION']], low_memory=False)
+    activities_dataframe = pd.read_csv(filenames[data_sources_with_ids['ACTIVITY_RECOGNITION']], low_memory=False,
+                                       header=None)
     activities_dataframe.columns = ["timestamp", "value"]
     activities_dataframe.drop_duplicates()
-    app_usage_dataframe = pd.read_csv(filenames[data_sources_with_ids['APPLICATION_USAGE']], low_memory=False)
+    activities_dataframe.sort_values(by='timestamp')
+    app_usage_dataframe = pd.read_csv(filenames[data_sources_with_ids['APPLICATION_USAGE']], low_memory=False,
+                                      header=None)
     app_usage_dataframe.columns = ["timestamp", "value"]
     app_usage_dataframe.drop_duplicates()
-    light_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_LIGHT']], low_memory=False)
+    app_usage_dataframe.sort_values(by='timestamp')
+    light_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_LIGHT']], low_memory=False, header=None)
     light_dataframe.columns = ["timestamp", "value"]
     light_dataframe.drop_duplicates()
+    light_dataframe.sort_values(by='timestamp')
     signif_motion_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_SIGNIFICANT_MOTION']],
-                                          low_memory=False)
+                                          low_memory=False, header=None)
     signif_motion_dataframe.columns = ["timestamp", "value"]
     signif_motion_dataframe.drop_duplicates()
-    step_detector_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_STEP_DETECTOR']], low_memory=False)
+    signif_motion_dataframe.sort_values(by='timestamp')
+    step_detector_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_STEP_DETECTOR']], low_memory=False,
+                                          header=None)
     step_detector_dataframe.columns = ["timestamp", "value"]
     step_detector_dataframe.drop_duplicates()
-    calls_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALLS']], low_memory=False)
+    step_detector_dataframe.sort_values(by='timestamp')
+    calls_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALLS']], low_memory=False, header=None)
     calls_dataframe.columns = ["timestamp", "value"]
     calls_dataframe.drop_duplicates()
-    sms_dataframe = pd.read_csv(filenames[data_sources_with_ids['SMS']], low_memory=False)
+    calls_dataframe.sort_values(by='timestamp')
+    sms_dataframe = pd.read_csv(filenames[data_sources_with_ids['SMS']], low_memory=False, header=None)
     sms_dataframe.columns = ["timestamp", "value"]
     sms_dataframe.drop_duplicates()
-    notifications_dataframe = pd.read_csv(filenames[data_sources_with_ids['NOTIFICATIONS']], low_memory=False)
+    sms_dataframe.sort_values(by='timestamp')
+    notifications_dataframe = pd.read_csv(filenames[data_sources_with_ids['NOTIFICATIONS']], low_memory=False,
+                                          header=None)
     notifications_dataframe.columns = ["timestamp", "value"]
     notifications_dataframe.drop_duplicates()
-    screen_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['SCREEN_STATE']], low_memory=False)
+    notifications_dataframe.sort_values(by='timestamp')
+    screen_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['SCREEN_STATE']], low_memory=False,
+                                         header=None)
     screen_state_dataframe.columns = ["timestamp", "value"]
     screen_state_dataframe.drop_duplicates()
-    unlock_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['UNLOCK_STATE']], low_memory=False)
+    screen_state_dataframe.sort_values(by='timestamp')
+    unlock_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['UNLOCK_STATE']], low_memory=False,
+                                         header=None)
     unlock_state_dataframe.columns = ["timestamp", "value"]
     unlock_state_dataframe.drop_duplicates()
-    microphone_dataframe = pd.read_csv(filenames[data_sources_with_ids['SOUND_DATA']], low_memory=False, header=False)
+    unlock_state_dataframe.sort_values(by='timestamp')
+    microphone_dataframe = pd.read_csv(filenames[data_sources_with_ids['SOUND_DATA']], low_memory=False)
     microphone_dataframe.columns = ["timestamp", "value"]
     microphone_dataframe.drop_duplicates()
-    stored_media_dataframe = pd.read_csv(filenames[data_sources_with_ids['STORED_MEDIA']], low_memory=False)
+    microphone_dataframe.sort_values(by='timestamp')
+    stored_media_dataframe = pd.read_csv(filenames[data_sources_with_ids['STORED_MEDIA']], low_memory=False,
+                                         header=None)
     stored_media_dataframe.columns = ["timestamp", "value"]
     stored_media_dataframe.drop_duplicates()
-    wifi_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_WIFI']], low_memory=False)
+    stored_media_dataframe.sort_values(by='timestamp')
+    wifi_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_WIFI']], low_memory=False, header=None)
     wifi_dataframe.columns = ["timestamp", "value"]
     wifi_dataframe.drop_duplicates()
-    typing_dataframe = pd.read_csv(filenames[data_sources_with_ids['TYPING']], low_memory=False)
+    wifi_dataframe.sort_values(by='timestamp')
+    typing_dataframe = pd.read_csv(filenames[data_sources_with_ids['TYPING']], low_memory=False, header=None)
     typing_dataframe.columns = ["timestamp", "value"]
     typing_dataframe.drop_duplicates()
-    locations_gps_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATION_GPS']], low_memory=False)
+    typing_dataframe.sort_values(by='timestamp')
+    locations_gps_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATION_GPS']], low_memory=False,
+                                          header=None)
     locations_gps_dataframe.columns = ["timestamp", "value"]
     locations_gps_dataframe.drop_duplicates()
-    locations_manual_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATIONS_MANUAL']], low_memory=False)
+    locations_gps_dataframe.sort_values(by='timestamp')
+    locations_manual_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATIONS_MANUAL']], low_memory=False,
+                                             header=None)
     locations_manual_dataframe.columns = ["timestamp", "value"]
     locations_manual_dataframe.drop_duplicates()
-    calendar_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALENDAR']], low_memory=False)
+    locations_manual_dataframe.sort_values(by='timestamp')
+    calendar_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALENDAR']], low_memory=False, header=None)
     calendar_dataframe.columns = ["timestamp", "value"]
     calendar_dataframe.drop_duplicates()
+    calendar_dataframe.sort_values(by='timestamp')
 
     # endregion
 
     for row in ema_table.itertuples():
+        print('*************' + row.timestamp + '*************')
         ema_time_range = get_ema_time_range(int(row.timestamp))
+
         # region extracting features related to EMA
+        print("Extracting activities features")
         activities_features = features_extraction.get_activity_recognition_features(activities_dataframe,
                                                                                     ema_time_range['time_from'],
                                                                                     ema_time_range['time_to'])
-        app_usage_features = features_extraction.get_activity_recognition_features(app_usage_dataframe,
-                                                                                   ema_time_range['time_from'],
-                                                                                   ema_time_range['time_to'])
+        print("Extracting app usage features")
+        app_usage_features = features_extraction.get_app_usage_features(app_usage_dataframe,
+                                                                        ema_time_range['time_from'],
+                                                                        ema_time_range['time_to'])
+        print("Extracting light features")
         light_features = features_extraction.get_light_features(light_dataframe,
                                                                 ema_time_range['time_from'],
                                                                 ema_time_range['time_to'])
+        print("Extracting significant motion features")
         significant_motion_features = features_extraction.get_signif_motion_features(signif_motion_dataframe,
                                                                                      ema_time_range['time_from'],
                                                                                      ema_time_range['time_to'])
+        print("Extracting step detector features")
         step_detector_features = features_extraction.get_step_detector_features(step_detector_dataframe,
                                                                                 ema_time_range['time_from'],
                                                                                 ema_time_range['time_to'])
+        print("Extracting calls features")
         calls_features = features_extraction.get_calls_features(calls_dataframe,
                                                                 ema_time_range['time_from'],
                                                                 ema_time_range['time_to'])
+        print("Extracting sms features")
         sms_features = features_extraction.get_sms_features(sms_dataframe,
                                                             ema_time_range['time_from'],
                                                             ema_time_range['time_to'])
+        print("Extracting notifications features")
         notifications_features = features_extraction.get_notifications_features(notifications_dataframe,
                                                                                 ema_time_range['time_from'],
                                                                                 ema_time_range['time_to'])
+        print("Extracting screen state features")
         screen_state_features = features_extraction.get_screen_state_features(screen_state_dataframe,
                                                                               ema_time_range['time_from'],
                                                                               ema_time_range['time_to'])
+        print("Extracting unlock state features")
         unlock_state_features = features_extraction.get_unlock_state_features(unlock_state_dataframe,
                                                                               ema_time_range['time_from'],
                                                                               ema_time_range['time_to'])
+        print("Extracting microphone features")
         microphone_features = features_extraction.get_microphone_features(microphone_dataframe,
                                                                           ema_time_range['time_from'],
                                                                           ema_time_range['time_to'])
+        print("Extracting stored media features")
         stored_media_features = features_extraction.get_stored_media_features(stored_media_dataframe,
                                                                               ema_time_range['time_from'],
                                                                               ema_time_range['time_to'])
+        print("Extracting wifi features")
         wifi_features = features_extraction.get_wifi_features(wifi_dataframe,
                                                               ema_time_range['time_from'],
                                                               ema_time_range['time_to'])
+        print("Extracting typing features")
         typing_features = features_extraction.get_typing_features(typing_dataframe,
                                                                   ema_time_range['time_from'],
                                                                   ema_time_range['time_to'])
+        print("Extracting calendar features")
         calendar_features = features_extraction.get_calendar_features(calendar_dataframe,
                                                                       ema_time_range['time_from'],
                                                                       ema_time_range['time_to'])
+        print("Extracting locations features")
         locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
+                                                                        locations_manual_dataframe,
                                                                         ema_time_range['time_from'],
                                                                         ema_time_range['time_to'])
 
@@ -426,19 +471,25 @@ def extract_features(user_directory, user_id):
         }
         # endregion
 
+        output_table = output_table.append(extracted_features, ignore_index=True)
+        output_table.to_csv('works.csv')
         return f'Feature extraction finished for {user_directory}'
 
-    def main():
-        start = time.perf_counter()
-        # can be done in parallel only per participants and not per data sources
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            results = [executor.submit(extract_features, filename) for filename in os.listdir(directory)]
 
-        for f in concurrent.futures.as_completed(results):
-            print(f.result())
+def main():
+    start = time.perf_counter()
+    # can be done in parallel only per participants and not per data sources
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #     results = [executor.submit(extract_features, filename) for filename in os.listdir(directory)]
+    #
+    # for f in concurrent.futures.as_completed(results):
+    #     print(f.result())
 
-        finish = time.perf_counter()
-        print(f'Finished in {round(finish - start)} second(s)')
+    extract_features('data_for_fe/4-86', 86)
 
-    if __name__ == '__main__':
-        main()
+    finish = time.perf_counter()
+    print(f'Finished in {round(finish - start)} second(s)')
+
+
+if __name__ == '__main__':
+    main()

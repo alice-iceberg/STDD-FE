@@ -180,7 +180,7 @@ def get_light_features(table, start_time, end_time):
         timestamp = row.timestamp
         value = row.value.split(" ")[1]
         if tools.in_range(int(timestamp), start_time, end_time):
-            light_data.append(int(value))
+            light_data.append(float(value))
 
     if light_data.__len__() > 0:
         light_features['light_min'] = min(light_data)
@@ -262,7 +262,7 @@ def get_calls_features(table, start_time, end_time):
         timestamp = row.timestamp
         start = row.value.split(" ")[0]
         end = row.value.split(" ")[1]
-        call_type = row.row.value.split(" ")[2]
+        call_type = row.value.split(" ")[2]
 
         if tools.in_range(int(timestamp), start_time, end_time):
             if call_type == "IN":
@@ -302,7 +302,7 @@ def get_sms_features(table, start_time, end_time):
         'sms_min_chars': 0,
         'sms_max_chars': 0,
         'sms_avg_chars': 0,
-        'sms_unique_contacts_num': 0,
+        'sms_unique_contacts': 0,
         'sms_total_num': 0
     }
 
@@ -576,6 +576,8 @@ def get_typing_features(table, start_time, end_time):
         if typing_features["typing_freq"] > 1:
             typing_features["typing_stdev"] = statistics.stdev(typing_durations)
 
+    return typing_features
+
 
 def get_calendar_features(table, start_time, end_time):
     # todo: recheck how many calendar records are for each EMA
@@ -601,7 +603,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
 
     global no_outliers, manual_locations, work_cluster_number, univ_cluster_number
     location_features = {
-        "places_num": np.NaN,
+        'places_num': np.NaN,
         "dur_at_place_max": np.NaN,
         "dur_at_place_min": np.NaN,
         "dur_at_place_avg": np.NaN,
@@ -637,7 +639,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
             timestamps.append(timestamp)
 
     lat_lng = np.array(lat_lng).astype('float64')
-    timestamps = np.array(timestamps)
+    timestamps = np.array(timestamps).astype('int64')
 
     location_features["location_variance"] = lat_lng.var()
 
@@ -671,7 +673,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
             outlier_label = tools.get_outlier_cluster(kmeans, MIN_POINTS_PER_CLUSTER)
             if outlier_label == -1:  # no outliers detected
                 no_outliers = True
-                location_features["places_num"] = num_clusters
+                location_features['places_num'] = num_clusters
                 break
             else:
                 no_outliers = False
@@ -686,12 +688,13 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
 
     if no_outliers:
         manual_locations = tools.get_manual_locations(manual_locations_table)
-        home_cluster_number = kmeans.predict(
-            [manual_locations["home"]])
-        if manual_locations["work"] != np.NaN:
+        if manual_locations["home"]:  # exists
+            home_cluster_number = kmeans.predict(
+                [manual_locations["home"]])
+        if manual_locations["work"]:
             work_cluster_number = kmeans.predict(
                 [manual_locations["work"]])
-        if manual_locations["univ"] != np.NaN:
+        if manual_locations["univ"]:
             univ_cluster_number = kmeans.predict(
                 [manual_locations["univ"]])
 
@@ -745,7 +748,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
             location_features["duration_at_home"] = time_duration_per_cluster[int(
                 home_cluster_index_from_end)]
 
-        if manual_locations["work"] != np.NaN and manual_locations["univ"] != np.NaN:
+        if manual_locations["work"] and manual_locations["univ"]:
             location_features["duration_at_work/study"] = 0
             if work_cluster_number == 0:
                 location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
@@ -760,7 +763,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
                 location_features["duration_at_work/study"] += time_duration_per_cluster[int(
                     univ_cluster_index_from_end)]
 
-        elif manual_locations["work"] != np.NaN and manual_locations["univ"] == np.NaN:
+        elif manual_locations["work"] and not manual_locations["univ"]:
             if work_cluster_number == 0:
                 location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
             elif work_cluster_number > 0:
@@ -768,7 +771,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
                 location_features["duration_at_work/study"] = time_duration_per_cluster[int(
                     work_cluster_index_from_end)]
 
-        elif manual_locations["work"] == np.NaN and manual_locations["univ"] != np.NaN:
+        elif not manual_locations["work"] and manual_locations["univ"]:
             if univ_cluster_number == 0:
                 location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
             elif univ_cluster_number > 0:
@@ -804,8 +807,11 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
             location_features["normalized_entropy"] = location_features["entropy"] / log_num_clusters
         # endregion
 
-    location_features["distance_from_home_max"] = tools.get_max_distance_from_home(manual_locations["home"], table,
-                                                                                   start_time, end_time)
+    if manual_locations['home']:
+        location_features["distance_from_home_max"] = tools.get_max_distance_from_home(manual_locations["home"], table,
+                                                                                       start_time, end_time)
+
+    return location_features
 
 
 def get_sleep_duration(table):

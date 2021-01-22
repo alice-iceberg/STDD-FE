@@ -75,13 +75,13 @@ def from_timestamp_to_ema_order(timestamp):
     ema_order = 0
 
     dt = datetime.fromtimestamp(timestamp / 1000)
-    if 0 <= dt.hour < 10 or 22 <= dt.hour <= 23:
+    if dt.hour == 10:
         ema_order = 1
-    elif 10 <= dt.hour < 14:
+    elif dt.hour == 14:
         ema_order = 2
-    elif 14 <= dt.hour < 18:
+    elif dt.hour == 18:
         ema_order = 3
-    elif 18 <= dt.hour < 22:
+    elif dt.hour == 22:
         ema_order = 4
 
     return ema_order
@@ -101,6 +101,25 @@ def get_ema_time_range(ema_timestamp):
         ema_time_range["time_from"] = ema_timestamp - 14400000  # 4 hours before EMA
 
     return ema_time_range
+
+
+def remove_duplicate_ema(filename):
+    ema_arr = []
+    dataframe = pd.read_csv(filename, header=None)
+    dataframe.columns=['timestamp', 'value']
+    output_dataframe = pd.DataFrame(columns=['timestamp', 'value'])
+    for row in dataframe.itertuples():
+        date = datetime.fromtimestamp(int(row.timestamp) / 1000).date()
+        ema_order = from_timestamp_to_ema_order(row.timestamp)
+
+        if ema_order != 0:
+            ema = str(date) + '-' + str(ema_order)
+            if ema not in ema_arr:
+                ema_arr.append(ema)
+                output_dataframe = output_dataframe.append({'timestamp': row.timestamp, 'value': row.value},
+                                                           ignore_index=True)
+
+    output_dataframe.to_csv(filename, index=False, header=False)
 
 
 def get_google_category(app_package):
@@ -131,11 +150,11 @@ def get_google_category(app_package):
 
 def get_manual_locations(dataframe):
     locations = {
-        "home": np.NaN,
-        "work": np.NaN,
-        "univ": np.NaN,
-        "library": np.NaN,
-        "additional": np.NaN
+        "home": [],
+        "work": [],
+        "univ": [],
+        "library": [],
+        "additional": []
     }
 
     dataframe = dataframe['value'].str.split(' ', n=3, expand=True)
@@ -188,7 +207,7 @@ def get_max_distance_from_home(home_location, dataframe, start_time, end_time):
         timestamp = row.timestamp
         if in_range(int(timestamp), start_time, end_time):
             all_distances_from_home.append(
-                haversine(home_location, [float(row['Lat']), float(row['Lng'])], Unit.METERS))
+                haversine(home_location, [float(row[1]), float(row[2])], Unit.METERS))
 
     max_distance_from_home = max(all_distances_from_home)
 
