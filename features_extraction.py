@@ -601,6 +601,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
     :return:
     """
 
+
     location_features = {
         'places_num': np.NaN,
         "dur_at_place_max": np.NaN,
@@ -617,7 +618,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
         "distance_travelled_total": np.NaN
     }
 
-    MIN_POINTS_PER_CLUSTER = 4  # 4 elements is 20 minutes
+    MIN_POINTS_PER_CLUSTER = 3  # 3 elements is 15 minutes
     MAX_DISTANCE_IN_CLUSTER = 100  # in meters
 
     lat_lng = []
@@ -629,7 +630,7 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
 
     table = table['value'].str.split(' ', n=5, expand=True)
     table.columns = ['timestamp', 'lat', 'lng', 'speed', 'accuracy', 'altitude']
-
+    manual_locations = tools.get_manual_locations(manual_locations_table)
     for row in table.itertuples(index=False):
         timestamp = row.timestamp
 
@@ -640,171 +641,178 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
     lat_lng = np.array(lat_lng).astype('float64')
     timestamps = np.array(timestamps).astype('int64')
 
-    location_features["location_variance"] = lat_lng.var()
-
-    while True:
-        temp = num_clusters
-        kmeans = KMeans(n_clusters=num_clusters, init='k-means++', random_state=42)
-        y_label = kmeans.fit_predict(lat_lng)
-
-        # squared distance to cluster center
-        X_dist = kmeans.transform(lat_lng) ** 2
-
-        for label in np.unique(kmeans.labels_):
-            X_label_indices = np.where(y_label == label)[0]
-            max_label_idx = X_label_indices[np.argmax(X_dist[y_label == label].sum(axis=1))]
-            max_indices.append(max_label_idx)
-
-        farthest_points = (lat_lng[max_indices])
-        centroids = kmeans.cluster_centers_
-
-        for i, centroid in enumerate(centroids):
-            distances.append(haversine(farthest_points[i], centroid, unit=Unit.METERS))
-            # generate new cluster if distance is more than a threshold
-            if distances[i] > MAX_DISTANCE_IN_CLUSTER:
-                temp = num_clusters + 1
-
-        total_distance_travelled_per_cluster.append(sum(distances))
-        elements_per_cluster = Counter(kmeans.labels_)
-        if elements_per_cluster[0] < MIN_POINTS_PER_CLUSTER and temp > 1:
-            break
-        if temp == num_clusters:
-            outlier_label = tools.get_outlier_cluster(kmeans, MIN_POINTS_PER_CLUSTER)
-            if outlier_label == -1:  # no outliers detected
-                no_outliers = True
-                location_features['places_num'] = num_clusters
-                break
-            else:
-                no_outliers = False
-                indices = np.where(y_label == outlier_label)[0]
-                lat_lng = tools.remove_outlier_cluster(lat_lng, indices)
-        elif temp > num_clusters:
-            num_clusters = temp
-            no_outliers = True  # TODO: check should be true or false
-        else:
-            print("Exception occurred: temp < num_clusters")
-            no_outliers = False
-
-    if no_outliers:
-        manual_locations = tools.get_manual_locations(manual_locations_table)
-        if manual_locations["home"]:  # exists
-            home_cluster_number = kmeans.predict(
-                [manual_locations["home"]])
-        if manual_locations["work"]:
-            work_cluster_number = kmeans.predict(
-                [manual_locations["work"]])
-        if manual_locations["univ"]:
-            univ_cluster_number = kmeans.predict(
-                [manual_locations["univ"]])
-
-        # region Time duration per location cluster
-        n = num_clusters
-        max_timestamp = timestamps[0]
-        min_timestamp = timestamps[0]
-        time_duration = 0
-        time_duration_per_cluster = []  # starts with last cluster
-        current_cluster = num_clusters - 1
-        elements_per_cluster = Counter(kmeans.labels_)
+    if len(lat_lng) > 3:
+        location_features["location_variance"] = lat_lng.var()
 
         while True:
-            elems = np.where(y_label == current_cluster)[0]
+            temp = num_clusters
+            kmeans = KMeans(n_clusters=num_clusters, init='k-means++', random_state=42)
+            y_label = kmeans.fit_predict(lat_lng)
 
-            for j, value in enumerate(elems):
-                if j == 0:
-                    min_timestamp = timestamps[value]
-                elif (j == elements_per_cluster[current_cluster] - 1) and (
-                        value - elems[j - 1] > 1):  # if element is one and the last
-                    break
-                elif (value - elems[j - 1] > 1) and (elems[j + 1] - value > 1):  # if element is one
-                    continue
-                elif j == elements_per_cluster[current_cluster] - 1:  # last element of the cluster reached
-                    max_timestamp = timestamps[value]
-                    time_duration = time_duration + abs(max_timestamp - min_timestamp)
+            # squared distance to cluster center
+            X_dist = kmeans.transform(lat_lng) ** 2
 
-                elif j > 0 and abs(elems[j - 1] - value) > 1:
-                    max_timestamp = timestamps[elems[j - 1]]
+            for label in np.unique(kmeans.labels_):
+                X_label_indices = np.where(y_label == label)[0]
+                max_label_idx = X_label_indices[np.argmax(X_dist[y_label == label].sum(axis=1))]
+                max_indices.append(max_label_idx)
 
-                    if abs(max_timestamp - min_timestamp) != 0:
-                        time_duration = time_duration + abs(max_timestamp - min_timestamp)
-                        min_timestamp = timestamps[value]
-            time_duration_per_cluster.append(time_duration)
-            current_cluster = current_cluster - 1  # move to the previous cluster, because started from last
+            farthest_points = (lat_lng[max_indices])
+            centroids = kmeans.cluster_centers_
 
-            if current_cluster == -1:  # no clusters remained
+            for i, centroid in enumerate(centroids):
+                distances.append(haversine(farthest_points[i], centroid, unit=Unit.METERS))
+                # generate new cluster if distance is more than a threshold
+                if distances[i] > MAX_DISTANCE_IN_CLUSTER:
+                    temp = num_clusters + 1
+
+            total_distance_travelled_per_cluster.append(sum(distances))
+            elements_per_cluster = Counter(kmeans.labels_)
+            if elements_per_cluster[0] < MIN_POINTS_PER_CLUSTER and temp > 1:
                 break
-
-        location_features["dur_at_place_min"] = min(time_duration_per_cluster)
-        location_features["dur_at_place_max"] = max(time_duration_per_cluster)
-        location_features["dur_at_place_avg"] = statistics.mean(time_duration_per_cluster)
-
-        location_features["distance_travelled_total"] = sum(total_distance_travelled_per_cluster)
-        location_features["distance_btw_locations_max"] = max(total_distance_travelled_per_cluster)
-
-        if home_cluster_number == 0:
-            location_features["duration_at_home"] = time_duration_per_cluster[-1]  # last index
-        elif home_cluster_number > 0:
-            home_cluster_index_from_end = -home_cluster_number - 1
-            location_features["duration_at_home"] = time_duration_per_cluster[int(
-                home_cluster_index_from_end)]
-
-        if manual_locations["work"] and manual_locations["univ"]:
-            location_features["duration_at_work/study"] = 0
-            if work_cluster_number == 0:
-                location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
-            elif work_cluster_number > 0:
-                work_cluster_index_from_end = -work_cluster_number - 1
-                location_features["duration_at_work/study"] += time_duration_per_cluster[int(
-                    work_cluster_index_from_end)]
-            if univ_cluster_number == 0:
-                location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
-            elif univ_cluster_number > 0:
-                univ_cluster_index_from_end = -univ_cluster_number - 1
-                location_features["duration_at_work/study"] += time_duration_per_cluster[int(
-                    univ_cluster_index_from_end)]
-
-        elif manual_locations["work"] and not manual_locations["univ"]:
-            if work_cluster_number == 0:
-                location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
-            elif work_cluster_number > 0:
-                work_cluster_index_from_end = -work_cluster_number - 1
-                location_features["duration_at_work/study"] = time_duration_per_cluster[int(
-                    work_cluster_index_from_end)]
-
-        elif not manual_locations["work"] and manual_locations["univ"]:
-            if univ_cluster_number == 0:
-                location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
-            elif univ_cluster_number > 0:
-                univ_cluster_index_from_end = -univ_cluster_number - 1
-                location_features["duration_at_work/study"] = time_duration_per_cluster[int(
-                    univ_cluster_index_from_end)]
-
-        # endregion
-
-        # region Location entropy
-        percentage_per_cluster = []  # starting from the last
-        log_percentage_per_cluster = []
-        total_time = sum(time_duration_per_cluster)
-        entropy = 0
-
-        for i in range(0, time_duration_per_cluster.__len__()):
-            percentage_per_cluster.append((time_duration_per_cluster[i] / total_time))
-            if percentage_per_cluster[i] != 0:
-                log_percentage_per_cluster.append(np.math.log(percentage_per_cluster[i], 10))  # log10P
-                entropy += percentage_per_cluster[i] * log_percentage_per_cluster[
-                    i]
+            if temp == num_clusters:
+                outlier_label = tools.get_outlier_cluster(kmeans, MIN_POINTS_PER_CLUSTER)
+                if outlier_label == -1:  # no outliers detected
+                    no_outliers = True
+                    location_features['places_num'] = num_clusters
+                    break
+                else:
+                    no_outliers = False
+                    indices = np.where(y_label == outlier_label)[0]
+                    lat_lng = tools.remove_outlier_cluster(lat_lng, indices)
+            elif temp > num_clusters:
+                num_clusters = temp
+                no_outliers = True  # TODO: check should be true or false
             else:
-                log_percentage_per_cluster.append(0)
-                entropy += 0
-                n -= 1
+                print("Exception occurred: temp < num_clusters")
+                no_outliers = False
 
-        location_features["entropy"] = abs(entropy)
-        # endregion
+        if no_outliers:
 
-        # region normalized entropy
-        log_num_clusters = math.log(n, 10)
-        if log_num_clusters != 0:
-            location_features["normalized_entropy"] = location_features["entropy"] / log_num_clusters
-        # endregion
+            if manual_locations["home"]:  # exists
+                home_cluster_number = kmeans.predict(
+                    [manual_locations["home"]])
+            if manual_locations["work"]:
+                work_cluster_number = kmeans.predict(
+                    [manual_locations["work"]])
+            if manual_locations["univ"]:
+                univ_cluster_number = kmeans.predict(
+                    [manual_locations["univ"]])
+
+            # region Time duration per location cluster
+            n = num_clusters
+            max_timestamp = timestamps[0]
+            min_timestamp = timestamps[0]
+            time_duration = 0
+            time_duration_per_cluster = []  # starts with last cluster
+            current_cluster = num_clusters - 1
+            elements_per_cluster = Counter(kmeans.labels_)
+
+            while True:
+                elems = np.where(y_label == current_cluster)[0]
+
+                for j, value in enumerate(elems):
+                    if j == 0:
+                        min_timestamp = timestamps[value]
+                    elif (j == elements_per_cluster[current_cluster] - 1) and (
+                            value - elems[j - 1] > 1):  # if element is one and the last
+                        break
+                    elif (value - elems[j - 1] > 1) and (elems[j + 1] - value > 1):  # if element is one
+                        continue
+                    elif j == elements_per_cluster[current_cluster] - 1:  # last element of the cluster reached
+                        max_timestamp = timestamps[value]
+                        time_duration = time_duration + abs(max_timestamp - min_timestamp)
+
+                    elif j > 0 and abs(elems[j - 1] - value) > 1:
+                        max_timestamp = timestamps[elems[j - 1]]
+
+                        if abs(max_timestamp - min_timestamp) != 0:
+                            time_duration = time_duration + abs(max_timestamp - min_timestamp)
+                            min_timestamp = timestamps[value]
+                time_duration_per_cluster.append(time_duration)
+                current_cluster = current_cluster - 1  # move to the previous cluster, because started from last
+
+                if current_cluster == -1:  # no clusters remained
+                    break
+
+            location_features["dur_at_place_min"] = min(time_duration_per_cluster)
+            location_features["dur_at_place_max"] = max(time_duration_per_cluster)
+            location_features["dur_at_place_avg"] = statistics.mean(time_duration_per_cluster)
+
+            location_features["distance_travelled_total"] = sum(total_distance_travelled_per_cluster)
+            location_features["distance_btw_locations_max"] = max(total_distance_travelled_per_cluster)
+
+            if home_cluster_number == 0:
+                location_features["duration_at_home"] = time_duration_per_cluster[-1]  # last index
+            elif home_cluster_number > 0:
+                home_cluster_index_from_end = -home_cluster_number - 1
+                location_features["duration_at_home"] = time_duration_per_cluster[int(
+                    home_cluster_index_from_end)]
+
+            if manual_locations["work"] and manual_locations["univ"]:
+                location_features["duration_at_work/study"] = 0
+                if work_cluster_number == 0:
+                    location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
+                elif work_cluster_number > 0:
+                    work_cluster_index_from_end = -work_cluster_number - 1
+                    location_features["duration_at_work/study"] += time_duration_per_cluster[int(
+                        work_cluster_index_from_end)]
+                if univ_cluster_number == 0:
+                    location_features["duration_at_work/study"] += time_duration_per_cluster[-1]  # last index
+                elif univ_cluster_number > 0:
+                    univ_cluster_index_from_end = -univ_cluster_number - 1
+                    location_features["duration_at_work/study"] += time_duration_per_cluster[int(
+                        univ_cluster_index_from_end)]
+
+            elif manual_locations["work"] and not manual_locations["univ"]:
+                if work_cluster_number == 0:
+                    location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
+                elif work_cluster_number > 0:
+                    work_cluster_index_from_end = -work_cluster_number - 1
+                    location_features["duration_at_work/study"] = time_duration_per_cluster[int(
+                        work_cluster_index_from_end)]
+
+            elif not manual_locations["work"] and manual_locations["univ"]:
+                if univ_cluster_number == 0:
+                    location_features["duration_at_work/study"] = time_duration_per_cluster[-1]  # last index
+                elif univ_cluster_number > 0:
+                    univ_cluster_index_from_end = -univ_cluster_number - 1
+                    location_features["duration_at_work/study"] = time_duration_per_cluster[int(
+                        univ_cluster_index_from_end)]
+
+            # endregion
+
+            # region Location entropy
+            percentage_per_cluster = []  # starting from the last
+            log_percentage_per_cluster = []
+            total_time = sum(time_duration_per_cluster)
+            entropy = 0
+
+            for i in range(0, time_duration_per_cluster.__len__()):
+                if total_time > 0:
+                    percentage_per_cluster.append((time_duration_per_cluster[i] / total_time))
+                else:
+                    percentage_per_cluster.append(0)
+                if percentage_per_cluster[i] != 0:
+                    log_percentage_per_cluster.append(np.math.log(percentage_per_cluster[i], 10))  # log10P
+                    entropy += percentage_per_cluster[i] * log_percentage_per_cluster[
+                        i]
+                else:
+                    log_percentage_per_cluster.append(0)
+                    entropy += 0
+                    n -= 1
+
+            location_features["entropy"] = abs(entropy)
+            # endregion
+
+            # region normalized entropy
+            if n != 0:
+                log_num_clusters = math.log(n, 10)
+            else:
+                log_num_clusters = 0
+            if log_num_clusters != 0:
+                location_features["normalized_entropy"] = location_features["entropy"] / log_num_clusters
+            # endregion
 
     if manual_locations['home']:
         location_features["distance_from_home_max"] = tools.get_max_distance_from_home(manual_locations["home"], table,

@@ -14,7 +14,7 @@ cat_list = pd.read_csv('Cat_group.csv')
 def create_filenames(USER_ID, DATA_SOURCE_IDs):
     filenames = {}
     for item, value in enumerate(DATA_SOURCE_IDs):
-        _filename = f'data_for_fe/4-{USER_ID}/{USER_ID}_{value}.csv'
+        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/4-{USER_ID}/{USER_ID}_{value}.csv'
         filenames[value] = _filename
 
     return filenames
@@ -209,6 +209,9 @@ def get_max_distance_from_home(home_location, dataframe, start_time, end_time):
             all_distances_from_home.append(
                 haversine(home_location, [float(row[1]), float(row[2])], Unit.METERS))
 
-    max_distance_from_home = max(all_distances_from_home)
+    if len(all_distances_from_home) > 0:
+        max_distance_from_home = max(all_distances_from_home)
+    else:
+        max_distance_from_home = np.nan
 
     return max_distance_from_home

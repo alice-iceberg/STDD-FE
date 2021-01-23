@@ -1,3 +1,5 @@
+import concurrent.futures
+import os
 import time
 
 import pandas as pd
@@ -185,12 +187,14 @@ data_sources_with_ids = {
 }
 
 
-def extract_features(user_directory, user_id):
+def extract_features(user_directory):
+    user_id = int(user_directory.split('-')[1])
     filenames = create_filenames(user_id, data_sources)
     output_table = pd.DataFrame(columns=output_columns)
+    output_filename = f'extracted_features_{user_id}.csv'
     print(f'Feature extraction started for {user_directory}')
 
-    ema_filename = f'{user_directory}/{user_id}_11.csv'
+    ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
     remove_duplicate_ema(ema_filename)
 
     ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
@@ -345,11 +349,11 @@ def extract_features(user_directory, user_id):
         calendar_features = features_extraction.get_calendar_features(calendar_dataframe,
                                                                       ema_time_range['time_from'],
                                                                       ema_time_range['time_to'])
-        print("Extracting locations features")
-        locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
-                                                                        locations_manual_dataframe,
-                                                                        ema_time_range['time_from'],
-                                                                        ema_time_range['time_to'])
+        # print("Extracting locations features")
+        # # locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
+        #                                                                 locations_manual_dataframe,
+        #                                                                 ema_time_range['time_from'],
+        #                                                                 ema_time_range['time_to'])
 
         # endregion
 
@@ -404,19 +408,19 @@ def extract_features(user_directory, user_id):
             'light_avg': light_features['light_avg'],
             'light_stddev': light_features['light_stddev'],
             'light_dark_ratio': light_features['light_dark_ratio'],
-            'places_num': locations_features['places_num'],
-            'dur_at_place_max': locations_features['dur_at_place_max'],
-            'dur_at_place_min': locations_features['dur_at_place_min'],
-            'dur_at_place_avg': locations_features['dur_at_place_avg'],
-            'dur_at_place_stdev': locations_features['dur_at_place_stdev'],
-            'entropy': locations_features['entropy'],
-            'normalized_entropy': locations_features['normalized_entropy'],
-            'location_variance': locations_features['location_variance'],
-            'duration_at_home': locations_features['duration_at_home'],
-            'duration_at_work/study': locations_features['duration_at_work/study'],
-            'distance_btw_locations_max': locations_features['distance_btw_locations_max'],
-            'distance_from_home_max': locations_features['distance_from_home_max'],
-            'distance_travelled_total': locations_features['distance_travelled_total'],
+            # 'places_num': locations_features['places_num'],
+            # 'dur_at_place_max': locations_features['dur_at_place_max'],
+            # 'dur_at_place_min': locations_features['dur_at_place_min'],
+            # 'dur_at_place_avg': locations_features['dur_at_place_avg'],
+            # 'dur_at_place_stdev': locations_features['dur_at_place_stdev'],
+            # 'entropy': locations_features['entropy'],
+            # 'normalized_entropy': locations_features['normalized_entropy'],
+            # 'location_variance': locations_features['location_variance'],
+            # 'duration_at_home': locations_features['duration_at_home'],
+            # 'duration_at_work/study': locations_features['duration_at_work/study'],
+            # 'distance_btw_locations_max': locations_features['distance_btw_locations_max'],
+            # 'distance_from_home_max': locations_features['distance_from_home_max'],
+            # 'distance_travelled_total': locations_features['distance_travelled_total'],
             'signif_motion_freq': significant_motion_features,
             'steps_num': step_detector_features,
             'calls_missed_num': calls_features['calls_missed_num'],
@@ -472,20 +476,20 @@ def extract_features(user_directory, user_id):
         # endregion
 
         output_table = output_table.append(extracted_features, ignore_index=True)
-    output_table.to_csv('works.csv')
+    output_table.to_csv(output_filename)
     return f'Feature extraction finished for {user_directory}'
 
 
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
-    # with concurrent.futures.ProcessPoolExecutor() as executor:
-    #     results = [executor.submit(extract_features, filename) for filename in os.listdir(directory)]
-    #
-    # for f in concurrent.futures.as_completed(results):
-    #     print(f.result())
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = [executor.submit(extract_features, filename) for filename in os.listdir(directory)]
 
-    extract_features('data_for_fe/4-86', 86)
+    for f in concurrent.futures.as_completed(results):
+        print(f.result())
+
+    # extract_features('data_for_fe/4-86', 86)
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
