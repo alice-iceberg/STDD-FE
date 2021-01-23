@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 import features_extraction
-from tools import create_filenames, get_ema_time_range, is_weekday, remove_duplicate_ema
+import tools
 
 USER_ID = 89
 directory = 'data_for_fe'
@@ -192,13 +192,13 @@ data_sources_with_ids = {
 def extract_features(user_directory):
     if user_directory != '.DS_Store':
         user_id = int(user_directory.split('-')[-1])
-        filenames = create_filenames(user_id, data_sources)
+        filenames = tools.create_filenames(user_id, data_sources)
         output_table = pd.DataFrame(columns=output_columns)
         output_filename = f'extracted_features_{user_id}.csv'
         print(f'Feature extraction started for {user_directory}')
 
         ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
-        remove_duplicate_ema(ema_filename)
+        tools.remove_duplicate_ema(ema_filename)
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
@@ -225,7 +225,8 @@ def extract_features(user_directory):
         signif_motion_dataframe.columns = ["timestamp", "value"]
         signif_motion_dataframe.drop_duplicates()
         signif_motion_dataframe.sort_values(by='timestamp')
-        step_detector_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_STEP_DETECTOR']], low_memory=False,
+        step_detector_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_STEP_DETECTOR']],
+                                              low_memory=False,
                                               header=None)
         step_detector_dataframe.columns = ["timestamp", "value"]
         step_detector_dataframe.drop_duplicates()
@@ -289,7 +290,7 @@ def extract_features(user_directory):
 
         for row in ema_table.itertuples():
             print('*************' + row.timestamp + '*************')
-            ema_time_range = get_ema_time_range(int(row.timestamp))
+            ema_time_range = tools.get_ema_time_range(int(row.timestamp))
 
             # region extracting features related to EMA
             print("Extracting activities features")
@@ -473,7 +474,7 @@ def extract_features(user_directory):
                 'typing_stdev': typing_features['typing_stdev'],
                 'cal_events_num': calendar_features,
                 'gender': user_ids_with_gender[user_id],
-                'weekday': is_weekday(row.timestamp),
+                'weekday': tools.is_weekday(row.timestamp),
                 'depr_group': user_ids_with_depression_group[user_id]
             }
             # endregion
@@ -484,7 +485,7 @@ def extract_features(user_directory):
 
 
 def add_sleep_duration(user_directory):
-    if user_directory!='.DS_Store':
+    if user_directory != '.DS_Store':
         user_id = int(user_directory.split('-')[-1])
         print('Sleep extraction started for user', user_id)
 
@@ -532,11 +533,81 @@ def add_sleep_duration(user_directory):
     return f'Sleep extraction finished for user: {user_directory}'
 
 
+def add_weather_data(user_directory):
+    if user_directory != '.DS_Store':
+        print(f'Weather features extraction started for {user_directory}')
+        weather_df = pd.read_csv('/Users/aliceberg/Programming/PyCharm/STDD-FE/incheon.csv', index_col='date_time')
+        user_id = int(user_directory.split('-')[-1])
+
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
+
+        ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
+        ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
+        ema_table.columns = ['timestamp', 'ema_order', 'phq1', 'phq2', 'phq3', 'phq4', 'phq5', 'phq6', 'phq7', 'phq8',
+                             'phq9']
+
+        output_dataframe = pd.read_csv(output_filename)
+
+        weather_features = {
+            'tempC': [],
+            'totalSnow_cm': [],
+            'cloudcover': [],
+            'precipMM': [],
+            'windspeedKmph': [],
+        }
+
+        for row in ema_table.itertuples():
+            print('*************' + row.timestamp + '*************')
+            timestamp_year = tools.from_timestamp_to_year(row.timestamp)
+            timestamp_month = tools.from_timestamp_to_month(row.timestamp)
+            timestamp_day = tools.from_timestamp_to_day(row.timestamp)
+            timestamp_hour = tools.from_timestamp_to_hour(row.timestamp)
+
+            date_time = str(timestamp_year) + '-'
+            # region converting timestamp to the right date format
+            if timestamp_month < 10:
+                date_time += '0' + str(timestamp_month) + '-'
+            else:
+                date_time += str(timestamp_month) + '-'
+
+            if timestamp_day < 10:
+                date_time += '0' + str(timestamp_day) + ' '
+            else:
+                date_time += str(timestamp_day) + ' '
+
+            if timestamp_hour == 10:
+                date_time += '09:00:00'
+            elif timestamp_hour == 18:
+                date_time += '18:00:00'
+            elif timestamp_hour == 22:
+                date_time += '21:00:00'
+            elif timestamp_hour == 14:
+                date_time += '12:00:00'
+            # endregion
+
+            weather_features['tempC'].append(weather_df.loc[date_time].tempC)
+            weather_features['totalSnow_cm'].append(weather_df.loc[date_time].totalSnow_cm)
+            weather_features['cloudcover'].append(weather_df.loc[date_time].cloudcover)
+            weather_features['precipMM'].append(weather_df.loc[date_time].precipMM)
+            weather_features['windspeedKmph'].append(weather_df.loc[date_time].windspeedKmph)
+
+        output_dataframe['tempC'] = weather_features['tempC']
+        output_dataframe['totalSnow_cm'] = weather_features['totalSnow_cm']
+        output_dataframe['cloudcover'] = weather_features['cloudcover']
+        output_dataframe['precipMM'] = weather_features['precipMM']
+        output_dataframe['windspeedKmph'] = weather_features['windspeedKmph']
+
+        output_dataframe.to_csv(output_filename, index=False)
+
+    return f'Weather features extraction finished for {user_directory}'
+
+
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(add_sleep_duration, filename) for filename in os.listdir(directory)]
+        results = [executor.submit(add_weather_data, filename) for filename in os.listdir(directory)]
 
     for f in concurrent.futures.as_completed(results):
         print(f.result())

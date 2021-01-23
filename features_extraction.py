@@ -863,6 +863,8 @@ def get_sleep_duration(table):
                 max_difference_index = np.argmax(differences)
                 start_time = night_timestamps[int(max_difference_index)]
                 end_time = night_timestamps[int(max_difference_index) + 1]
+                start_time = tools.from_timestamp_to_hour(start_time)
+                end_time = tools.from_timestamp_to_hour(end_time)
                 if max_difference == 0:
                     sleep_durations[yesterday] = np.nan
                 else:

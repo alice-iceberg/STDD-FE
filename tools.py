@@ -57,6 +57,13 @@ def from_timestamp_to_month(timestamp):
     return month
 
 
+def from_timestamp_to_year(timestamp):
+    timestamp = int(timestamp)
+    dt = datetime.fromtimestamp(timestamp / 1000)
+    year = dt.year
+    return year
+
+
 def from_timestamp_to_day(timestamp):
     timestamp = int(timestamp)
     dt = datetime.fromtimestamp(timestamp / 1000)
