@@ -188,7 +188,7 @@ data_sources_with_ids = {
 
 
 def extract_features(user_directory):
-    user_id = int(user_directory.split('-')[1])
+    user_id = int(user_directory.split('-')[-1])
     filenames = create_filenames(user_id, data_sources)
     output_table = pd.DataFrame(columns=output_columns)
     output_filename = f'extracted_features_{user_id}.csv'

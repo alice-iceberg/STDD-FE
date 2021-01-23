@@ -601,7 +601,6 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
     :return:
     """
 
-
     location_features = {
         'places_num': np.NaN,
         "dur_at_place_max": np.NaN,
@@ -822,8 +821,6 @@ def get_locations_features(table, manual_locations_table, start_time, end_time):
 
 
 def get_sleep_duration(table):
-    # todo revisit, idea is to save dict with dates as key
-
     """
 
     :param table: input dataframe (app usage)
@@ -833,34 +830,41 @@ def get_sleep_duration(table):
     filtered_table = pd.DataFrame(columns=['timestamp', 'value'])
 
     for row in table.itertuples(index=False):
-        timestamp = int(table.timestamp)
+        timestamp = int(row.timestamp)
         if tools.in_range_of_sleep_hours(timestamp):
             filtered_table = filtered_table.append({'timestamp': row.timestamp, 'value': row.value}, ignore_index=True)
 
-    timestamps = np.array(filtered_table['timestamp'])
+    timestamps = np.sort(np.array(filtered_table['timestamp']))
     sleep_durations = {}
-    sub_timestamps = []
+    night_timestamps = []
     today = datetime.fromtimestamp(int(timestamps[0]) / 1000).date()
     tomorrow = today + timedelta(days=1)
 
     for timestamp in timestamps:
         if (tools.from_timestamp_to_hour(timestamp) >= 21 and datetime.fromtimestamp(
-                int(timestamp)).date() == today) or (
-                tools.from_timestamp_to_hour(timestamp) < 12 and datetime.fromtimestamp(int(timestamp)).date()
+                int(timestamp) / 1000).date() == today) or (
+                tools.from_timestamp_to_hour(timestamp) <= 12 and datetime.fromtimestamp(int(timestamp) / 1000).date()
                 == tomorrow):
-            sub_timestamps.append(timestamp)
+            night_timestamps.append(timestamp)
         else:
+            today = tomorrow
+            tomorrow = today + timedelta(days=1)
             try:
-                sleep_durations[today] = round((np.diff(np.array(sub_timestamps)).max()) / 60000)
-                sub_timestamps = []
-                today = tomorrow
-                tomorrow = today + timedelta(days=1)
-                print(today, tomorrow)
-                sub_timestamps.append(timestamp)
+                differences = np.diff(np.array(night_timestamps))
+                max_difference = differences.max()
+                max_difference_index = np.argmax(differences)
+                start_time = night_timestamps[int(max_difference_index)]
+                end_time = night_timestamps[int(max_difference_index) + 1]
+                if max_difference == 0:
+                    sleep_durations[today] = np.nan
+                else:
+                    sleep_durations[today] = [round(max_difference / 60000), start_time,
+                                              end_time]  # convert to minutes
+                night_timestamps = [timestamp]
             except ValueError:
-                pass
-
-    print('Number of days: ', len(sleep_durations))
-    print(sleep_durations)
+                if len(night_timestamps) == 0:
+                    sleep_durations[today] = np.nan
+                else:
+                    night_timestamps = []
 
     return sleep_durations

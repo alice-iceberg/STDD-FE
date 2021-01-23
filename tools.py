@@ -1,6 +1,6 @@
 import urllib.request
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -11,10 +11,10 @@ pckg_to_cat_map = {}
 cat_list = pd.read_csv('Cat_group.csv')
 
 
-def create_filenames(USER_ID, DATA_SOURCE_IDs):
+def create_filenames(user_id, data_source_ids):
     filenames = {}
-    for item, value in enumerate(DATA_SOURCE_IDs):
-        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/4-{USER_ID}/{USER_ID}_{value}.csv'
+    for item, value in enumerate(data_source_ids):
+        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/4-{user_id}/{user_id}_{value}.csv'
         filenames[value] = _filename
 
     return filenames
@@ -29,10 +29,25 @@ def in_range(number, start, end):
 
 def in_range_of_sleep_hours(timestamp):
     # sleep hours are 9pm to 12pm
-    if from_timestamp_to_hour(timestamp) >= 21 or from_timestamp_to_hour(timestamp) < 12:
+    # more than 9pm today
+    # less than 12 pm tomorrow
+    if from_timestamp_to_hour(timestamp) >= 21 or from_timestamp_to_hour(timestamp) <= 12:
         return True
     else:
         return False
+
+
+def is_next_day(timestamp_now, timestamp_next):
+    timestamp_now = int(timestamp_now / 1000)
+    timestamp_next = int(timestamp_next / 1000)
+
+    dt_now = datetime.fromtimestamp(timestamp_now)
+    dt_next = datetime.fromtimestamp(timestamp_next)
+
+    if dt_next == dt_now + timedelta(days=1):
+        return True
+
+    return False
 
 
 def from_timestamp_to_month(timestamp):
@@ -106,7 +121,7 @@ def get_ema_time_range(ema_timestamp):
 def remove_duplicate_ema(filename):
     ema_arr = []
     dataframe = pd.read_csv(filename, header=None)
-    dataframe.columns=['timestamp', 'value']
+    dataframe.columns = ['timestamp', 'value']
     output_dataframe = pd.DataFrame(columns=['timestamp', 'value'])
     for row in dataframe.itertuples():
         date = datetime.fromtimestamp(int(row.timestamp) / 1000).date()
