@@ -837,18 +837,26 @@ def get_sleep_duration(table):
     timestamps = np.sort(np.array(filtered_table['timestamp']))
     sleep_durations = {}
     night_timestamps = []
-    today = datetime.fromtimestamp(int(timestamps[0]) / 1000).date()
-    tomorrow = today + timedelta(days=1)
+    yesterday = datetime.fromtimestamp(int(timestamps[0]) / 1000).date()
+    today = datetime.fromtimestamp(int(timestamps[0]) / 1000).date() + timedelta(days=1)
+
+    if tools.from_timestamp_to_hour(timestamps[0]) >= 21:
+        yesterday = datetime.fromtimestamp(int(timestamps[0]) / 1000).date()
+        today = datetime.fromtimestamp(int(timestamps[0]) / 1000).date() + timedelta(days=1)
+
+    elif tools.from_timestamp_to_hour(timestamps[0]) <= 12:
+        today = datetime.fromtimestamp(int(timestamps[0]) / 1000).date()
+        yesterday = datetime.fromtimestamp(int(timestamps[0]) / 1000).date() - timedelta(days=1)
 
     for timestamp in timestamps:
         if (tools.from_timestamp_to_hour(timestamp) >= 21 and datetime.fromtimestamp(
-                int(timestamp) / 1000).date() == today) or (
+                int(timestamp) / 1000).date() == yesterday) or (
                 tools.from_timestamp_to_hour(timestamp) <= 12 and datetime.fromtimestamp(int(timestamp) / 1000).date()
-                == tomorrow):
+                == today):
             night_timestamps.append(timestamp)
         else:
-            today = tomorrow
-            tomorrow = today + timedelta(days=1)
+            yesterday = today
+            today = yesterday + timedelta(days=1)
             try:
                 differences = np.diff(np.array(night_timestamps))
                 max_difference = differences.max()
@@ -856,15 +864,17 @@ def get_sleep_duration(table):
                 start_time = night_timestamps[int(max_difference_index)]
                 end_time = night_timestamps[int(max_difference_index) + 1]
                 if max_difference == 0:
-                    sleep_durations[today] = np.nan
+                    sleep_durations[yesterday] = np.nan
                 else:
-                    sleep_durations[today] = [round(max_difference / 60000), start_time,
+                    sleep_durations[yesterday] = [round(max_difference / 60000), start_time,
                                               end_time]  # convert to minutes
                 night_timestamps = [timestamp]
             except ValueError:
                 if len(night_timestamps) == 0:
-                    sleep_durations[today] = np.nan
+                    sleep_durations[yesterday] = np.nan
                 else:
                     night_timestamps = []
+
+    print(sleep_durations)
 
     return sleep_durations
