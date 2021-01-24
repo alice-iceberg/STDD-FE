@@ -2,6 +2,7 @@ import os
 import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta
+import statistics
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,17 @@ def add_header_to_df(filename, output_columns):
     df.to_csv(filename, index=False)
 
 
+def reorder_columns_df(filename):
+    df = pd.read_csv(filename)
+    cols = df.columns.tolist()
+
+
+def drop_columns_from_df(filename, columns):
+    df = pd.read_csv(filename)
+    df = df.drop(columns, axis=1)
+    df.to_csv(filename, index=False)
+
+
 def combine_files(directory, output_columns):
     filenames = os.listdir(directory)
     output_dataframe = pd.DataFrame(columns=output_columns)
@@ -41,7 +53,7 @@ def combine_files(directory, output_columns):
 
 
 def in_range(number, start, end):
-    if start <= number <= end:
+    if start < number <= end:
         return True
     else:
         return False
@@ -257,3 +269,17 @@ def get_max_distance_from_home(home_location, dataframe, start_time, end_time):
         max_distance_from_home = np.nan
 
     return max_distance_from_home
+
+
+def get_social_activity_threshold(social_activity_values):
+    social_activity_values = np.sort(social_activity_values)
+    min_index_separator = round(len(social_activity_values)/3) - 1
+    max_index_separator = (len(social_activity_values) - 1) - min_index_separator
+
+    max_social_activity_values = social_activity_values[max_index_separator:]
+    social_activity_threshold = round(statistics.mean(max_social_activity_values) / 5)
+
+    return social_activity_threshold
+
+
+

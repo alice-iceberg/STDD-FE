@@ -1,4 +1,4 @@
-import os
+import statistics
 import time
 from datetime import datetime
 
@@ -609,14 +609,15 @@ def add_weather_data(user_directory):
     return f'Weather features extraction finished for {user_directory}'
 
 
-def missing_data_imputation(user_directory):
+def missing_data_imputation_ffill(user_directory):
     if user_directory != '.DS_Store':
         print(f'Started missing data imputation for {user_directory}')
         user_id = int(user_directory.split('-')[-1])
         output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
         output_dataframe = pd.read_csv(output_filename)
-
-        for col in ['pitch_min', 'images_num', 'videos_num', 'music_num', 'cal_events_num']:
+        columns = ['pitch_min', 'images_num', 'videos_num', 'music_num', 'cal_events_num', 'sound_energy_min',
+                   'sound_energy_max', 'sound_energy_avg', 'sound_energy_stdev']
+        for col in columns:
             output_dataframe[col] = output_dataframe[col].ffill()
 
         output_dataframe.to_csv(output_filename, index=False)
@@ -624,10 +625,152 @@ def missing_data_imputation(user_directory):
     return f'Finished missing data imputation for {user_directory}'
 
 
+def social_activity_value_calculation(filename):
+    weight = 10  # todo: the value of weight is to be decided
+    dataframe = pd.read_csv(filename)
+    social_activity_values = []
+    social_activity_scores = []
+
+    for user_id in user_ids:
+        for row in dataframe.itertuples():
+            if row.user_id == user_id:
+                print(f'Social activity score is calculated for {user_id}')
+                # quantity in multiplied by weight and durations are divided by 1000 for scaling
+                social_incoming = \
+                    int(row.calls_missed_num) * weight + int(row.calls_in_num) * weight + round(int(
+                        row.calls_min_in_dur) / 1000) + round(int(row.calls_max_in_dur / 1000)) + round(int(
+                        row.calls_avg_in_dur) / 1000) + round(int(row.calls_total_in_dur) / 1000) + int(
+                        row.sms_min_chars) \
+                    + int(row.sms_max_chars) + int(row.sms_avg_chars) + \
+                    int(row.sms_unique_contacts) * weight + int(row.sms_total_num) * weight
+
+                social_outgoing = round(int(row.app_social_communication_dur) / 1000) + int(
+                    row.app_social_communication_freq) * weight + int(row.calls_out_num) * weight + round(
+                    int(row.calls_min_out_dur) / 1000) + round(
+                    int(row.calls_max_out_dur) / 1000) + round(
+                    int(row.calls_avg_out_dur) / 1000) + round(
+                    int(row.calls_total_out_dur) / 1000)
+
+                social_activity_value = social_incoming + social_outgoing
+                social_activity_values.append(social_activity_value)
+
+        social_activity_threshold = tools.get_social_activity_threshold(social_activity_values)
+        for social_activity_value in social_activity_values:
+            if social_activity_value <= social_activity_threshold:
+                social_activity_scores.append(1)
+            elif tools.in_range(social_activity_value, social_activity_threshold, social_activity_threshold * 2):
+                social_activity_scores.append(2)
+            elif tools.in_range(social_activity_value, social_activity_threshold * 2, social_activity_threshold * 3):
+                social_activity_scores.append(3)
+            elif tools.in_range(social_activity_value, social_activity_threshold * 3, social_activity_threshold * 4):
+                social_activity_scores.append(4)
+            elif social_activity_value > social_activity_threshold * 4:
+                social_activity_scores.append(5)
+        social_activity_values = []
+
+    dataframe['social_score'] = social_activity_scores
+    dataframe.to_csv(filename, index=False)
 
 
+def convert_ema_to_symptom_scores(filename):
+    dataframe = pd.read_csv(filename)
 
+    mood_scores = []
+    food_scores = []
+    sleep_scores = []
+    physical_activity_scores = []
+    social_activity_scores = []
 
+    for row in dataframe.itertuples():
+        # re-init
+        mood_ema = []
+        food_ema = []
+        sleep_ema = []
+        physical_activity_ema = []
+        social_activity_ema = []
+
+        mood_ema.append(row.phq1)
+        mood_ema.append(row.phq7)
+        mood_ema.append(row.phq9)
+
+        food_ema.append(row.phq3)
+
+        sleep_ema.append(row.phq4)
+
+        physical_activity_ema.append(row.phq5)
+        physical_activity_ema.append(row.phq6)
+
+        social_activity_ema.append(row.phq2)
+        social_activity_ema.append(row.phq8)
+
+        mood_score = round(statistics.mean(mood_ema))
+        food_score = food_ema[0]
+        sleep_score = sleep_ema[0]
+        physical_activity_score = round(statistics.mean(physical_activity_ema))
+        social_activity_score = round(statistics.mean(social_activity_ema))
+
+        # region converting scores
+        if mood_score == 5:
+            mood_score = 1
+        elif mood_score == 4:
+            mood_score = 2
+        elif mood_score == 2:
+            mood_score = 4
+        else:
+            mood_score = 5
+
+        if food_score == 5:
+            food_score = 1
+        elif food_score == 4:
+            food_score = 2
+        elif food_score == 2:
+            food_score = 4
+        else:
+            food_score = 5
+
+        if sleep_score == 5:
+            sleep_score = 1
+        elif sleep_score == 4:
+            sleep_score = 2
+        elif sleep_score == 2:
+            sleep_score = 4
+        else:
+            sleep_score = 5
+
+        if social_activity_score == 5:
+            social_activity_score = 1
+        elif social_activity_score == 4:
+            social_activity_score = 2
+        elif social_activity_score == 2:
+            social_activity_score = 4
+        else:
+            social_activity_score = 5
+
+        if physical_activity_score == 5:
+            physical_activity_score = 1
+        elif physical_activity_score == 4:
+            physical_activity_score = 2
+        elif physical_activity_score == 2:
+            physical_activity_score = 4
+        else:
+            physical_activity_score = 5
+
+        # endregion
+
+        mood_scores.append(mood_score)
+        food_scores.append(food_score)
+        sleep_scores.append(sleep_score)
+        physical_activity_scores.append(physical_activity_score)
+        social_activity_scores.append(social_activity_score)
+
+    # adding new columns to dataframe
+    dataframe['mood_gt'] = mood_scores
+    dataframe['food_gt'] = food_scores
+    dataframe['sleep_gt'] = sleep_scores
+    dataframe['physical_act_gt'] = physical_activity_scores
+    dataframe['social_act_gt'] = social_activity_scores
+
+    dataframe.to_csv(filename, index=False)
 
 
 def main():
@@ -638,6 +781,8 @@ def main():
     #
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
+
+    convert_ema_to_symptom_scores('all_extracted_features_no_missing.csv')
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
