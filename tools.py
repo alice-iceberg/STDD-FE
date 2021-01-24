@@ -1,3 +1,4 @@
+import os
 import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta
@@ -18,6 +19,25 @@ def create_filenames(user_id, data_source_ids):
         filenames[value] = _filename
 
     return filenames
+
+
+def add_header_to_df(filename, output_columns):
+    df = pd.read_csv(filename)
+    df.columns = output_columns
+    df.to_csv(filename, index=False)
+
+
+def combine_files(directory, output_columns):
+    filenames = os.listdir(directory)
+    output_dataframe = pd.DataFrame(columns=output_columns)
+
+    for filename in filenames:
+        filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/{filename}'
+        print("Combining", filename)
+        df = pd.read_csv(filename, header=None)
+        output_dataframe = output_dataframe.append(df)
+
+    output_dataframe.to_csv('all_extracted_features.csv', index=False)
 
 
 def in_range(number, start, end):

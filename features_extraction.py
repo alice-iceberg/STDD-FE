@@ -561,7 +561,9 @@ def get_typing_features(table, start_time, end_time):
         timestamp = row.value.split(" ")[0]
 
         if tools.in_range(int(timestamp), start_time, end_time):
-            typing_durations.append(int(row.value.split(" ")[1]) - int(row.value.split(" ")[0]))
+            typing_duration = int(row.value.split(" ")[1]) - int(row.value.split(" ")[0])
+            if typing_duration > 0:
+                typing_durations.append(typing_duration)
             if row.value.split(" ")[-1] not in unique_apps:
                 unique_apps.append(row.value.split(" ")[-1])
 

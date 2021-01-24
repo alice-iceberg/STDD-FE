@@ -1,4 +1,3 @@
-import concurrent.futures
 import os
 import time
 from datetime import datetime
@@ -10,7 +9,7 @@ import features_extraction
 import tools
 
 USER_ID = 89
-directory = 'data_for_fe'
+data_directory = 'data_for_fe'
 data_sources = [1, 4, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 26, 27, 28, 29, 71]
 
 user_ids = [86, 87, 89, 90, 91, 92, 93, 100, 102, 125, 119, 110]
@@ -159,8 +158,15 @@ output_columns = [
     'cal_events_num',
     'gender',
     'weekday',  # 1 if weekday, 0 otherwise
-    'depr_group'
-
+    'depr_group',
+    'sleep_dur',
+    'sleep_start',
+    'sleep_end',
+    'tempC',
+    'totalSnow_cm',
+    'cloudcover',
+    'precipMM',
+    'windspeedKmph',
 ]
 data_sources_with_ids = {
     'ACTIVITY_RECOGNITION': 1,
@@ -618,14 +624,20 @@ def missing_data_imputation(user_directory):
     return f'Finished missing data imputation for {user_directory}'
 
 
+
+
+
+
+
+
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(missing_data_imputation, filename) for filename in os.listdir(directory)]
-
-    for f in concurrent.futures.as_completed(results):
-        print(f.result())
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #     results = [executor.submit(missing_data_imputation, filename) for filename in os.listdir(data_directory)]
+    #
+    # for f in concurrent.futures.as_completed(results):
+    #     print(f.result())
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
