@@ -603,11 +603,26 @@ def add_weather_data(user_directory):
     return f'Weather features extraction finished for {user_directory}'
 
 
+def missing_data_imputation(user_directory):
+    if user_directory != '.DS_Store':
+        print(f'Started missing data imputation for {user_directory}')
+        user_id = int(user_directory.split('-')[-1])
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        output_dataframe = pd.read_csv(output_filename)
+
+        for col in ['pitch_min', 'images_num', 'videos_num', 'music_num', 'cal_events_num']:
+            output_dataframe[col] = output_dataframe[col].ffill()
+
+        output_dataframe.to_csv(output_filename, index=False)
+
+    return f'Finished missing data imputation for {user_directory}'
+
+
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(add_weather_data, filename) for filename in os.listdir(directory)]
+        results = [executor.submit(missing_data_imputation, filename) for filename in os.listdir(directory)]
 
     for f in concurrent.futures.as_completed(results):
         print(f.result())
