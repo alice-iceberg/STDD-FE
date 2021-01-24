@@ -213,3 +213,36 @@ def predict_physical_act_and_mood(filename):
     main_df['mood_pred'] = pred_mood
     main_df['phy_act_pred'] = pred_phy_act
     main_df.to_csv('features_with_clusters.csv', index=False)
+
+
+def create_symptom_clusters_file(filename):
+    df = pd.read_csv(filename)
+    symptom_clusters_df = pd.DataFrame()
+
+    symptom_clusters_df['user_id'] = df['user_id']
+    symptom_clusters_df['ema_timestamp'] = df['ema_timestamp']
+    symptom_clusters_df['mood'] = df['mood_pred']
+    symptom_clusters_df['physical_act'] = df['phy_act_pred']
+    symptom_clusters_df['sleep'] = df['sleep_score']
+    symptom_clusters_df['social_act'] = df['social_score']
+    symptom_clusters_df['food'] = df['food_gt']
+    symptom_clusters_df['depr_group'] = df['depr_group']
+
+    symptom_clusters_df.to_csv('symptom_clusters.csv', index=False)
+
+
+def train_test_general_model(filename):
+
+    dataset = pd.read_csv(filename)
+    X = dataset.iloc[:, 2:-1].values
+    y = dataset.iloc[:, -1].values
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=41)
+
+    classifier = XGBClassifier()
+    classifier.fit(X_train, y_train)
+
+    accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
+
+    print('Mean accuracy: ', accuracies.mean() * 100)
+    print('Std of accuracy: ', accuracies.std() * 100)
