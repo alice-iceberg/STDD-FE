@@ -1,8 +1,8 @@
 import os
+import statistics
 import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta
-import statistics
 
 import numpy as np
 import pandas as pd
@@ -26,6 +26,11 @@ def add_header_to_df(filename, output_columns):
     df = pd.read_csv(filename)
     df.columns = output_columns
     df.to_csv(filename, index=False)
+
+
+def convert_score(score):
+    score = int(score)
+    return score - 2 * (score - 3)
 
 
 def reorder_columns_df(filename):
@@ -273,7 +278,7 @@ def get_max_distance_from_home(home_location, dataframe, start_time, end_time):
 
 def get_social_activity_threshold(social_activity_values):
     social_activity_values = np.sort(social_activity_values)
-    min_index_separator = round(len(social_activity_values)/3) - 1
+    min_index_separator = round(len(social_activity_values) / 3) - 1
     max_index_separator = (len(social_activity_values) - 1) - min_index_separator
 
     max_social_activity_values = social_activity_values[max_index_separator:]
@@ -282,4 +287,106 @@ def get_social_activity_threshold(social_activity_values):
     return social_activity_threshold
 
 
+def createe_physical_act_features_file(input_filename):
+    df = pd.read_csv(input_filename)
+    df_out = pd.DataFrame()
+    df_out['user_id'] = df.user_id
+    df_out['ema_timestamp'] = df.ema_timestamp
+    df_out['still_freq'] = df.still_freq
+    df_out['walking_freq'] = df.walking_freq
+    df_out['running_freq'] = df.running_freq
+    df_out['on_bicycle_freq'] = df.on_bicycle_freq
+    df_out['in_vehicle_freq'] = df.in_vehicle_freq
+    df_out['signif_motion_freq'] = df.signif_motion_freq
+    df_out['steps_num'] = df.steps_num
+    df_out['weekday'] = df.weekday
+    df_out['gender'] = df.gender
+    df_out['physical_act_gt'] = df.physical_act_gt
 
+    df_out.to_csv('physical_act_features.csv', index=False)
+
+
+def create_mood_features_file(input_filename):
+    df = pd.read_csv(input_filename)
+    df_out = pd.DataFrame()
+    df_out['user_id'] = df.user_id
+    df_out['ema_timestamp'] = df.ema_timestamp
+    df_out['still_freq'] = df.still_freq
+    df_out['walking_freq'] = df.walking_freq
+    df_out['running_freq'] = df.running_freq
+    df_out['on_bicycle_freq'] = df.on_bicycle_freq
+    df_out['in_vehicle_freq'] = df.in_vehicle_freq
+    df_out['signif_motion_freq'] = df.signif_motion_freq
+    df_out['steps_num'] = df.steps_num
+    df_out['app_entertainment_music_dur'] = df.app_entertainment_music_dur
+    df_out['app_utilities_dur'] = df.app_utilities_dur
+    df_out['app_shopping_dur'] = df.app_shopping_dur
+    df_out['app_games_comics_dur'] = df.app_games_comics_dur
+    df_out['app_others_dur'] = df.app_others_dur
+    df_out['app_health_wellness_dur'] = df.app_health_wellness_dur
+    df_out['app_social_communication_dur'] = df.app_social_communication_dur
+    df_out['app_education_dur'] = df.app_education_dur
+    df_out['app_travel_dur'] = df.app_travel_dur
+    df_out['app_art_design_photo_dur'] = df.app_art_design_photo_dur
+    df_out['app_news_magazine_dur'] = df.app_news_magazine_dur
+    df_out['app_food_drink_dur'] = df.app_food_drink_dur
+    df_out['app_unknown_background_dur'] = df.app_unknown_background_dur
+    df_out['app_entertainment_music_freq'] = df.app_entertainment_music_freq
+    df_out['app_utilities_freq'] = df.app_utilities_freq
+    df_out['app_shopping_freq'] = df.app_shopping_freq
+    df_out['app_games_comics_freq'] = df.app_games_comics_freq
+    df_out['app_others_freq'] = df.app_others_freq
+    df_out['app_health_wellness_freq'] = df.app_health_wellness_freq
+    df_out['app_social_communication_freq'] = df.app_social_communication_freq
+    df_out['app_education_freq'] = df.app_education_freq
+    df_out['app_travel_freq'] = df.app_travel_freq
+    df_out['app_art_design_photo_freq'] = df.app_art_design_photo_freq
+    df_out['app_news_magazine_freq'] = df.app_news_magazine_freq
+    df_out['app_food_drink_freq'] = df.app_food_drink_freq
+    df_out['app_unknown_background_freq'] = df.app_unknown_background_freq
+    df_out['apps_total_num'] = df.apps_total_num
+    df_out['apps_unique_num'] = df.apps_unique_num
+    df_out['light_min'] = df.light_min
+    df_out['light_max'] = df.light_max
+    df_out['light_avg'] = df.light_avg
+    df_out['light_stddev'] = df.light_stddev
+    df_out['light_dark_ratio'] = df.light_dark_ratio
+    df_out['notif_arrived_num'] = df.notif_arrived_num
+    df_out['notif_clicked_num'] = df.notif_clicked_num
+    df_out['notif_min_dec_time'] = df.notif_min_dec_time
+    df_out['notif_max_dec_time'] = df.notif_max_dec_time
+    df_out['notif_avg_dec_time'] = df.notif_avg_dec_time
+    df_out['notif_stdev_dec_time'] = df.notif_stdev_dec_time
+    df_out['screen_on_freq'] = df.screen_on_freq
+    df_out['screen_off_freq'] = df.screen_off_freq
+    df_out['lock_freq'] = df.lock_freq
+    df_out['unlock_freq'] = df.unlock_freq
+    df_out['pitch_num'] = df.pitch_num
+    df_out['pitch_min'] = df.pitch_min
+    df_out['pitch_max'] = df.pitch_max
+    df_out['pitch_avg'] = df.pitch_avg
+    df_out['pitch_stdev'] = df.pitch_stdev
+    df_out['sound_energy_min'] = df.sound_energy_min
+    df_out['sound_energy_max'] = df.sound_energy_max
+    df_out['sound_energy_avg'] = df.sound_energy_avg
+    df_out['sound_energy_stdev'] = df.sound_energy_stdev
+    df_out['images_num'] = df.images_num
+    df_out['videos_num'] = df.videos_num
+    df_out['music_num'] = df.music_num
+    df_out['wifi_unique_num'] = df.wifi_unique_num
+    df_out['typing_freq'] = df.typing_freq
+    df_out['typing_unique_apps_num'] = df.typing_unique_apps_num
+    df_out['typing_max'] = df.typing_max
+    df_out['typing_avg'] = df.typing_avg
+    df_out['typing_stdev'] = df.typing_stdev
+    df_out['cal_events_num'] = df.cal_events_num
+    df_out['tempC'] = df.tempC
+    df_out['totalSnow_cm'] = df.totalSnow_cm
+    df_out['cloudcover'] = df.cloudcover
+    df_out['precipMM'] = df.precipMM
+    df_out['windspeedKmph'] = df.windspeedKmph
+    df_out['weekday'] = df.weekday
+    df_out['gender'] = df.gender
+    df_out['mood_gt'] = df.physical_act_gt
+
+    df_out.to_csv('mood_features.csv', index=False)

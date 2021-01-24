@@ -782,7 +782,8 @@ def main():
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
 
-    convert_ema_to_symptom_scores('all_extracted_features_no_missing.csv')
+    tools.createe_physical_act_features_file('all_extracted_features_no_missing.csv')
+    tools.create_mood_features_file('all_extracted_features_no_missing.csv')
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
