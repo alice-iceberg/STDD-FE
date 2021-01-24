@@ -1,6 +1,7 @@
 import statistics
 import time
 from datetime import datetime
+import ml
 
 import numpy as np
 import pandas as pd
@@ -782,8 +783,8 @@ def main():
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
 
-    tools.createe_physical_act_features_file('all_extracted_features_no_missing.csv')
-    tools.create_mood_features_file('all_extracted_features_no_missing.csv')
+    # ml.train_and_save_mood_models('mood_features.csv')
+    ml.predict_physical_act_and_mood('all_extracted_features_no_missing.csv')
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')

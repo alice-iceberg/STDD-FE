@@ -287,7 +287,7 @@ def get_social_activity_threshold(social_activity_values):
     return social_activity_threshold
 
 
-def createe_physical_act_features_file(input_filename):
+def create_physical_act_features_file(input_filename):
     df = pd.read_csv(input_filename)
     df_out = pd.DataFrame()
     df_out['user_id'] = df.user_id

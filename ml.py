@@ -1,4 +1,215 @@
+import pickle
+
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
+
+def train_and_save_physical_act_models(filename):
+    df = pd.read_csv(filename)
+
+    # splitting by user_id
+    gb = df.groupby('user_id')
+    [gb.get_group(x) for x in gb.groups]
+
+    for user_id in gb.groups:
+        accuracies_output_mean = []
+        accuracies_output_std = []
+        print(f'Physical activity model for {user_id}')
+        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act_models/' + str(
+            user_id) + '_physical_act.pkl'
+
+        df = gb.get_group(user_id)
+        X = df.iloc[:, 2:-1].values
+        y = df.iloc[:, -1].values
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        classifier = XGBClassifier()
+        classifier.fit(X_train, y_train)
+
+        accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
+        accuracies_output_mean.append(accuracies.mean() * 100)
+        accuracies_output_std.append(accuracies.std() * 100)
+
+        print('Mean accuracy for user ', user_id, 'is: ', accuracies_output_mean[len(accuracies_output_mean) - 1])
+
+        with open(output_filename, 'wb+') as f:
+            pickle.dump(classifier, f)
+
+        with open('physical_act_train_accuracies.txt', 'a+') as file:
+            line = '**************************************************\n\n'
+            file.write(line)
+            line = 'Mean accuracy for user ' + str(user_id) + ' is: ' + str(
+                accuracies_output_mean[len(accuracies_output_mean) - 1]) + '\n'
+            file.write(line)
+            line = 'Details:\n'
+            file.write(line)
+            line = 'Mean accuracies:' + str(accuracies_output_mean) + '\n'
+            file.write(line)
+            line = 'Std: ' + str(accuracies_output_std) + '\n'
+            file.write(line)
+
+
+def train_and_save_mood_models(filename):
+    df = pd.read_csv(filename)
+
+    # splitting by user_id
+    gb = df.groupby('user_id')
+    [gb.get_group(x) for x in gb.groups]
+
+    for user_id in gb.groups:
+        accuracies_output_mean = []
+        accuracies_output_std = []
+        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood_models/' + str(
+            user_id) + '_mood.pkl'
+
+        df = gb.get_group(user_id)
+        X = df.iloc[:, 2:-1].values
+        y = df.iloc[:, -1].values
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        classifier = XGBClassifier()
+        classifier.fit(X_train, y_train)
+
+        accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
+        accuracies_output_mean.append(accuracies.mean() * 100)
+        accuracies_output_std.append(accuracies.std() * 100)
+
+        print('Mean accuracy for user ', user_id, 'is: ', accuracies_output_mean[len(accuracies_output_mean) - 1])
+
+        with open(output_filename, 'wb+') as f:
+            pickle.dump(classifier, f)
+
+        with open('mood_train_accuracies.txt', 'a+') as file:
+            line = '**************************************************\n\n'
+            file.write(line)
+            line = 'Mean accuracy for user ' + str(user_id) + ' is: ' + str(
+                accuracies_output_mean[len(accuracies_output_mean) - 1]) + '\n'
+            file.write(line)
+            line = 'Details:\n'
+            file.write(line)
+            line = 'Mean accuracies:' + str(accuracies_output_mean) + '\n'
+            file.write(line)
+            line = 'Std: ' + str(accuracies_output_std) + '\n'
+            file.write(line)
+
+
+def predict_physical_act_and_mood(filename):
+    pred_mood = []
+    pred_phy_act = []
+    main_df = pd.read_csv(filename)
+
+    for row in main_df.itertuples():
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act_models/' + str(
+            row.user_id) + '_physical_act.pkl'
+        mood_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood_models/' + str(
+            row.user_id) + '_mood.pkl'
+
+        with open(physical_model_filename, 'rb') as f:
+            clf = pickle.load(f)
+
+            X_physical = [
+                row.still_freq,
+                row.walking_freq,
+                row.running_freq,
+                row.on_bicycle_freq,
+                row.in_vehicle_freq,
+                row.signif_motion_freq,
+                row.steps_num,
+                row.weekday,
+                row.gender]
+
+            X_trans_physical = np.array(X_physical).reshape((1, -1))
+            physical_pred = clf.predict(X_trans_physical)
+            pred_phy_act.append(int(physical_pred))
+
+        with open(mood_model_filename, 'rb') as f:
+            clf = pickle.load(f)
+            X_mood = [
+                row.still_freq,
+                row.walking_freq,
+                row.running_freq,
+                row.on_bicycle_freq,
+                row.in_vehicle_freq,
+                row.signif_motion_freq,
+                row.steps_num,
+                row.app_entertainment_music_dur,
+                row.app_utilities_dur,
+                row.app_shopping_dur,
+                row.app_games_comics_dur,
+                row.app_others_dur,
+                row.app_health_wellness_dur,
+                row.app_social_communication_dur,
+                row.app_education_dur,
+                row.app_travel_dur,
+                row.app_art_design_photo_dur,
+                row.app_news_magazine_dur,
+                row.app_food_drink_dur,
+                row.app_unknown_background_dur,
+                row.app_entertainment_music_freq,
+                row.app_utilities_freq,
+                row.app_shopping_freq,
+                row.app_games_comics_freq,
+                row.app_others_freq,
+                row.app_health_wellness_freq,
+                row.app_social_communication_freq,
+                row.app_education_freq,
+                row.app_travel_freq,
+                row.app_art_design_photo_freq,
+                row.app_news_magazine_freq,
+                row.app_food_drink_freq,
+                row.app_unknown_background_freq,
+                row.apps_total_num,
+                row.apps_unique_num,
+                row.light_min,
+                row.light_max,
+                row.light_avg,
+                row.light_stddev,
+                row.light_dark_ratio,
+                row.notif_arrived_num,
+                row.notif_clicked_num,
+                row.notif_min_dec_time,
+                row.notif_max_dec_time,
+                row.notif_avg_dec_time,
+                row.notif_stdev_dec_time,
+                row.screen_on_freq,
+                row.screen_off_freq,
+                row.lock_freq,
+                row.unlock_freq,
+                row.pitch_num,
+                row.pitch_min,
+                row.pitch_max,
+                row.pitch_avg,
+                row.pitch_stdev,
+                row.sound_energy_min,
+                row.sound_energy_max,
+                row.sound_energy_avg,
+                row.sound_energy_stdev,
+                row.images_num,
+                row.videos_num,
+                row.music_num,
+                row.wifi_unique_num,
+                row.typing_freq,
+                row.typing_unique_apps_num,
+                row.typing_max,
+                row.typing_avg,
+                row.typing_stdev,
+                row.cal_events_num,
+                row.tempC,
+                row.totalSnow_cm,
+                row.cloudcover,
+                row.precipMM,
+                row.windspeedKmph,
+                row.weekday,
+                row.gender,
+            ]
+
+            X_trans_mood = np.array(X_mood).reshape((1, -1))
+            prediction_mood = clf.predict(X_trans_mood)
+            pred_mood.append(int(prediction_mood))
+
+    main_df['mood_pred'] = pred_mood
+    main_df['phy_act_pred'] = pred_phy_act
+    main_df.to_csv('features_with_clusters.csv', index=False)
