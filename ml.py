@@ -2,6 +2,8 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import xgboost
+from matplotlib import pyplot
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
@@ -18,7 +20,7 @@ def train_and_save_physical_act_models(filename):
         accuracies_output_mean = []
         accuracies_output_std = []
         print(f'Physical activity model for {user_id}')
-        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act_models/' + str(
+        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
             user_id) + '_physical_act.pkl'
 
         df = gb.get_group(user_id)
@@ -62,7 +64,7 @@ def train_and_save_mood_models(filename):
     for user_id in gb.groups:
         accuracies_output_mean = []
         accuracies_output_std = []
-        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood_models/' + str(
+        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(
             user_id) + '_mood.pkl'
 
         df = gb.get_group(user_id)
@@ -102,9 +104,9 @@ def predict_physical_act_and_mood(filename):
     main_df = pd.read_csv(filename)
 
     for row in main_df.itertuples():
-        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act_models/' + str(
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
             row.user_id) + '_physical_act.pkl'
-        mood_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood_models/' + str(
+        mood_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(
             row.user_id) + '_mood.pkl'
 
         with open(physical_model_filename, 'rb') as f:
@@ -231,8 +233,211 @@ def create_symptom_clusters_file(filename):
     symptom_clusters_df.to_csv('symptom_clusters.csv', index=False)
 
 
-def train_test_general_model(filename):
+def get_physical_act_features_importance(user_ids):
+    for user_id in user_ids:
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
+            user_id) + '_physical_act.pkl'
+        with open(physical_model_filename, 'rb') as f:
+            clf = pickle.load(f)
+            line = clf.get_booster().get_score(importance_type='gain')
+            with open('physical_features_importance.txt', 'a+') as file:
+                file.write(str(line))
+                file.write('\n')
 
+
+def get_mood_features_importance(user_ids):
+    for user_id in user_ids:
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(user_id) + '_mood.pkl'
+        with open(physical_model_filename, 'rb') as f:
+            clf = pickle.load(f)
+            clf.get_booster().feature_names = ['still_freq',
+                                               'walking_freq',
+                                               'running_freq',
+                                               'on_bicycle_freq',
+                                               'in_vehicle_freq',
+                                               'signif_motion_freq',
+                                               'steps_num',
+                                               'app_entertainment_music_dur',
+                                               'app_utilities_dur',
+                                               'app_shopping_dur',
+                                               'app_games_comics_dur',
+                                               'app_others_dur',
+                                               'app_health_wellness_dur',
+                                               'app_social_communication_dur',
+                                               'app_education_dur',
+                                               'app_travel_dur',
+                                               'app_art_design_photo_dur',
+                                               'app_news_magazine_dur',
+                                               'app_food_drink_dur',
+                                               'app_unknown_background_dur',
+                                               'app_entertainment_music_freq',
+                                               'app_utilities_freq',
+                                               'app_shopping_freq',
+                                               'app_games_comics_freq',
+                                               'app_others_freq',
+                                               'app_health_wellness_freq',
+                                               'app_social_communication_freq',
+                                               'app_education_freq',
+                                               'app_travel_freq',
+                                               'app_art_design_photo_freq',
+                                               'app_news_magazine_freq',
+                                               'app_food_drink_freq',
+                                               'app_unknown_background_freq',
+                                               'apps_total_num',
+                                               'apps_unique_num',
+                                               'light_min',
+                                               'light_max',
+                                               'light_avg',
+                                               'light_stddev',
+                                               'light_dark_ratio',
+                                               'notif_arrived_num',
+                                               'notif_clicked_num',
+                                               'notif_min_dec_time',
+                                               'notif_max_dec_time',
+                                               'notif_avg_dec_time',
+                                               'notif_stdev_dec_time',
+                                               'screen_on_freq',
+                                               'screen_off_freq',
+                                               'lock_freq',
+                                               'unlock_freq',
+                                               'pitch_num',
+                                               'pitch_min',
+                                               'pitch_max',
+                                               'pitch_avg',
+                                               'pitch_stdev',
+                                               'sound_energy_min',
+                                               'sound_energy_max',
+                                               'sound_energy_avg',
+                                               'sound_energy_stdev',
+                                               'images_num',
+                                               'videos_num',
+                                               'music_num',
+                                               'wifi_unique_num',
+                                               'typing_freq',
+                                               'typing_unique_apps_num',
+                                               'typing_max',
+                                               'typing_avg',
+                                               'typing_stdev',
+                                               'cal_events_num',
+                                               'tempC',
+                                               'totalSnow_cm',
+                                               'cloudcover',
+                                               'precipMM',
+                                               'windspeedKmph',
+                                               'weekday',
+                                               'gender']
+            line = clf.get_booster().get_score(importance_type='gain')
+            with open('mood_features_importance.txt', 'a+') as file:
+                file.write(str(line))
+                file.write('\n\n')
+
+
+def plot_mood_features_importance():
+    user_ids = [86]
+    for user_id in user_ids:
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(user_id) + '_mood.pkl'
+        with open(physical_model_filename, 'rb') as f:
+            clf = pickle.load(f)
+            clf.get_booster().feature_names = ['still_freq',
+                                               'walking_freq',
+                                               'running_freq',
+                                               'on_bicycle_freq',
+                                               'in_vehicle_freq',
+                                               'signif_motion_freq',
+                                               'steps_num',
+                                               'app_entertainment_music_dur',
+                                               'app_utilities_dur',
+                                               'app_shopping_dur',
+                                               'app_games_comics_dur',
+                                               'app_others_dur',
+                                               'app_health_wellness_dur',
+                                               'app_social_communication_dur',
+                                               'app_education_dur',
+                                               'app_travel_dur',
+                                               'app_art_design_photo_dur',
+                                               'app_news_magazine_dur',
+                                               'app_food_drink_dur',
+                                               'app_unknown_background_dur',
+                                               'app_entertainment_music_freq',
+                                               'app_utilities_freq',
+                                               'app_shopping_freq',
+                                               'app_games_comics_freq',
+                                               'app_others_freq',
+                                               'app_health_wellness_freq',
+                                               'app_social_communication_freq',
+                                               'app_education_freq',
+                                               'app_travel_freq',
+                                               'app_art_design_photo_freq',
+                                               'app_news_magazine_freq',
+                                               'app_food_drink_freq',
+                                               'app_unknown_background_freq',
+                                               'apps_total_num',
+                                               'apps_unique_num',
+                                               'light_min',
+                                               'light_max',
+                                               'light_avg',
+                                               'light_stddev',
+                                               'light_dark_ratio',
+                                               'notif_arrived_num',
+                                               'notif_clicked_num',
+                                               'notif_min_dec_time',
+                                               'notif_max_dec_time',
+                                               'notif_avg_dec_time',
+                                               'notif_stdev_dec_time',
+                                               'screen_on_freq',
+                                               'screen_off_freq',
+                                               'lock_freq',
+                                               'unlock_freq',
+                                               'pitch_num',
+                                               'pitch_min',
+                                               'pitch_max',
+                                               'pitch_avg',
+                                               'pitch_stdev',
+                                               'sound_energy_min',
+                                               'sound_energy_max',
+                                               'sound_energy_avg',
+                                               'sound_energy_stdev',
+                                               'images_num',
+                                               'videos_num',
+                                               'music_num',
+                                               'wifi_unique_num',
+                                               'typing_freq',
+                                               'typing_unique_apps_num',
+                                               'typing_max',
+                                               'typing_avg',
+                                               'typing_stdev',
+                                               'cal_events_num',
+                                               'tempC',
+                                               'totalSnow_cm',
+                                               'cloudcover',
+                                               'precipMM',
+                                               'windspeedKmph',
+                                               'weekday',
+                                               'gender']
+            xgboost.plot_importance(clf.get_booster(), importance_type='weight')
+            pyplot.savefig('mood_features.png')
+
+
+def plot_physical_act_features_importance():
+    user_ids = [86]
+    for user_id in user_ids:
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(user_id) + '_physical_act.pkl'
+        with open(physical_model_filename, 'rb') as f:
+            clf = pickle.load(f)
+            clf.get_booster().feature_names = ['still_freq',
+                                               'walking_freq',
+                                               'running_freq',
+                                               'on_bicycle_freq',
+                                               'in_vehicle_freq',
+                                               'signif_motion_freq',
+                                               'steps_num',
+                                               'weekday',
+                                               'gender']
+            xgboost.plot_importance(clf.get_booster(), importance_type='weight')
+            pyplot.savefig('physical_act_features.png')
+
+
+def train_test_general_model(filename):
     dataset = pd.read_csv(filename)
     X = dataset.iloc[:, 2:-1].values
     y = dataset.iloc[:, -1].values

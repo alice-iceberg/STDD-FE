@@ -45,16 +45,18 @@ def drop_columns_from_df(filename, columns):
 
 
 def combine_files(directory, output_columns):
-    filenames = os.listdir(directory)
-    output_dataframe = pd.DataFrame(columns=output_columns)
+    if directory!='.DS_Store':
+        filenames = os.listdir(directory)
+        output_dataframe = pd.DataFrame(columns=output_columns)
 
-    for filename in filenames:
-        filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/{filename}'
-        print("Combining", filename)
-        df = pd.read_csv(filename, header=None)
-        output_dataframe = output_dataframe.append(df)
+        for filename in filenames:
+            if filename != '.DS_Store':
+                filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/{filename}'
+                print("Combining", filename)
+                df = pd.read_csv(filename, header=None, encoding='utf-8')
+                output_dataframe = output_dataframe.append(df)
 
-    output_dataframe.to_csv('all_extracted_features.csv', index=False)
+        output_dataframe.to_csv('all_extracted_features.csv', index=False)
 
 
 def in_range(number, start, end):
@@ -481,3 +483,6 @@ def create_mood_features_file(input_filename):
     df_out['mood_gt'] = df.physical_act_gt
 
     df_out.to_csv('mood_features.csv', index=False)
+
+
+

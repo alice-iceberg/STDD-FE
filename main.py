@@ -1,9 +1,8 @@
-import concurrent.futures
-import os
 import statistics
 import time
 from datetime import datetime
 
+import ml
 import numpy as np
 import pandas as pd
 
@@ -488,7 +487,7 @@ def add_sleep_duration(user_directory):
         user_id = int(user_directory.split('-')[-1])
         print('Sleep extraction started for user', user_id)
 
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
         app_usage_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_28.csv'
         ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
 
@@ -511,9 +510,9 @@ def add_sleep_duration(user_directory):
             'sleep_start': [],
             'sleep_end': []
         }
-        for row in ema_table.itertuples():
-            print('*************' + row.timestamp + '*************')
-            timestamp_date = datetime.fromtimestamp(int(row.timestamp) / 1000).date()
+        for row in output_dataframe.itertuples():
+            print('*************' + str(row.ema_timestamp) + '*************')
+            timestamp_date = datetime.fromtimestamp(int(row.ema_timestamp) / 1000).date()
             try:
                 sleep_features['sleep_dur'].append(sleep_features_all[timestamp_date][0])
                 sleep_features['sleep_start'].append(sleep_features_all[timestamp_date][1])
@@ -538,7 +537,7 @@ def add_weather_data(user_directory):
         weather_df = pd.read_csv('/Users/aliceberg/Programming/PyCharm/STDD-FE/incheon.csv', index_col='date_time')
         user_id = int(user_directory.split('-')[-1])
 
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
         ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
@@ -556,12 +555,12 @@ def add_weather_data(user_directory):
             'windspeedKmph': [],
         }
 
-        for row in ema_table.itertuples():
-            print('*************' + row.timestamp + '*************')
-            timestamp_year = tools.from_timestamp_to_year(row.timestamp)
-            timestamp_month = tools.from_timestamp_to_month(row.timestamp)
-            timestamp_day = tools.from_timestamp_to_day(row.timestamp)
-            timestamp_hour = tools.from_timestamp_to_hour(row.timestamp)
+        for row in output_dataframe.itertuples():
+            print('*************' + str(row.ema_timestamp) + '*************')
+            timestamp_year = tools.from_timestamp_to_year(row.ema_timestamp)
+            timestamp_month = tools.from_timestamp_to_month(row.ema_timestamp)
+            timestamp_day = tools.from_timestamp_to_day(row.ema_timestamp)
+            timestamp_hour = tools.from_timestamp_to_hour(row.ema_timestamp)
 
             date_time = str(timestamp_year) + '-'
             # region converting timestamp to the right date format
@@ -606,7 +605,7 @@ def missing_data_imputation_ffill(user_directory):
     if user_directory != '.DS_Store':
         print(f'Started missing data imputation for {user_directory}')
         user_id = int(user_directory.split('-')[-1])
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
         output_dataframe = pd.read_csv(output_filename)
         columns = ['pitch_min', 'images_num', 'videos_num', 'music_num', 'cal_events_num', 'sound_energy_min',
                    'sound_energy_max', 'sound_energy_avg', 'sound_energy_stdev']
@@ -618,30 +617,31 @@ def missing_data_imputation_ffill(user_directory):
     return f'Finished missing data imputation for {user_directory}'
 
 
-def social_activity_value_calculation(filename):
+def social_activity_score_calculation(filename):
     weight = 10  # todo: the value of weight is to be decided
-    dataframe = pd.read_csv(filename)
+    dataframe = pd.read_csv(filename, low_memory=False, encoding='utf-8')
     social_activity_values = []
     social_activity_scores = []
+    print(dataframe.columns)
 
     for user_id in user_ids:
         for row in dataframe.itertuples():
-            if row.user_id == user_id:
+            if int(row.user_id) == int(user_id):
                 print(f'Social activity score is calculated for {user_id}')
                 # quantity in multiplied by weight and durations are divided by 1000 for scaling
                 social_incoming = \
                     int(row.calls_missed_num) * weight + int(row.calls_in_num) * weight + round(int(
-                        row.calls_min_in_dur) / 1000) + round(int(row.calls_max_in_dur / 1000)) + round(int(
+                        row.calls_min_in_dur) / 1000) + round(int(row.calls_max_in_dur) / 1000) + round(int(
                         row.calls_avg_in_dur) / 1000) + round(int(row.calls_total_in_dur) / 1000) + int(
                         row.sms_min_chars) \
-                    + int(row.sms_max_chars) + int(row.sms_avg_chars) + \
+                    + int(round(int(row.sms_max_chars))) + int(round(float(row.sms_avg_chars))) + \
                     int(row.sms_unique_contacts) * weight + int(row.sms_total_num) * weight
 
                 social_outgoing = round(int(row.app_social_communication_dur) / 1000) + int(
                     row.app_social_communication_freq) * weight + int(row.calls_out_num) * weight + round(
                     int(row.calls_min_out_dur) / 1000) + round(
                     int(row.calls_max_out_dur) / 1000) + round(
-                    int(row.calls_avg_out_dur) / 1000) + round(
+                    int(float(row.calls_avg_out_dur)) / 1000) + round(
                     int(row.calls_total_out_dur) / 1000)
 
                 social_activity_value = social_incoming + social_outgoing
@@ -790,15 +790,21 @@ def convert_ema_to_symptom_scores(filename):
     dataframe.to_csv(filename, index=False)
 
 
+def remove_missing_values_rows(filename, threshold):
+    df = pd.read_csv(filename, low_memory=False)
+    df = df[df.isnull().sum(axis=1) < threshold]
+
+    df.to_csv(filename, index=False)
+
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(extract_features, filename) for filename in os.listdir(data_directory)]
-
-    for f in concurrent.futures.as_completed(results):
-        print(f.result())
-
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #     results = [executor.submit(add_weather_data, filename) for filename in os.listdir(data_directory)]
+    #
+    # for f in concurrent.futures.as_completed(results):
+    #     print(f.result())
+    ml.plot_physical_act_features_importance()
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
 
