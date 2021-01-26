@@ -2,11 +2,11 @@ import statistics
 import time
 from datetime import datetime
 
-import ml
 import numpy as np
 import pandas as pd
 
 import features_extraction
+import ml
 import tools
 
 USER_ID = 89
@@ -796,6 +796,7 @@ def remove_missing_values_rows(filename, threshold):
 
     df.to_csv(filename, index=False)
 
+
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
@@ -804,7 +805,7 @@ def main():
     #
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
-    ml.plot_physical_act_features_importance()
+    ml.plot_features_importance_total()
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
 

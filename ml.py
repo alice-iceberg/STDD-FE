@@ -414,14 +414,16 @@ def plot_mood_features_importance():
                                                'windspeedKmph',
                                                'weekday',
                                                'gender']
-            xgboost.plot_importance(clf.get_booster(), importance_type='weight')
-            pyplot.savefig('mood_features.png')
+            xgboost.plot_importance(clf.get_booster(), importance_type='total_gain', max_num_features=15,
+                                    show_values=False)
+            pyplot.savefig('mood_features(total_gain)B.png', bbox_inches='tight')
 
 
 def plot_physical_act_features_importance():
     user_ids = [86]
     for user_id in user_ids:
-        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(user_id) + '_physical_act.pkl'
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
+            user_id) + '_physical_act.pkl'
         with open(physical_model_filename, 'rb') as f:
             clf = pickle.load(f)
             clf.get_booster().feature_names = ['still_freq',
@@ -433,8 +435,22 @@ def plot_physical_act_features_importance():
                                                'steps_num',
                                                'weekday',
                                                'gender']
-            xgboost.plot_importance(clf.get_booster(), importance_type='weight')
-            pyplot.savefig('physical_act_features.png')
+            xgboost.plot_importance(clf.get_booster(), importance_type='total_gain', show_values=False)
+            pyplot.savefig('physical_act_features(total_gain)B.png', bbox_inches='tight')
+
+
+def plot_features_importance_total():
+    filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/depr_mode.pkl'
+    with open(filename, 'rb') as f:
+        classifier = pickle.load(f)
+        classifier.get_booster().feature_names = ['mood',
+                                                  'physical_act',
+                                                  'sleep',
+                                                  'social_act',
+                                                  'food']
+
+        xgboost.plot_importance(classifier.get_booster(), importance_type='weight')
+        pyplot.savefig('depr(weight).png', bbox_inches='tight')
 
 
 def train_test_general_model(filename):
@@ -449,5 +465,17 @@ def train_test_general_model(filename):
 
     accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
 
+    classifier.get_booster().feature_names = ['mood',
+                                              'physical_act',
+                                              'sleep',
+                                              'social_act',
+                                              'food']
+
     print('Mean accuracy: ', accuracies.mean() * 100)
     print('Std of accuracy: ', accuracies.std() * 100)
+
+    with open('depr_mode.pkl', 'wb+') as f:
+        pickle.dump(classifier, f)
+    xgboost.plot_importance(classifier.get_booster(), importance_type='total_gain', show_values=False)
+
+    pyplot.savefig('depr(total_gain).png', bbox_inches='tight')
