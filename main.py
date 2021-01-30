@@ -213,87 +213,88 @@ def extract_features(user_directory):
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
         ema_table.columns = ['timestamp', 'ema_order', 'phq1', 'phq2', 'phq3', 'phq4', 'phq5', 'phq6', 'phq7', 'phq8',
                              'phq9']
-
+        ema_table = ema_table.drop_duplicates()
+        ema_table = ema_table.sort_values(by='timestamp')
         # region creating dataframes
         activities_dataframe = pd.read_csv(filenames[data_sources_with_ids['ACTIVITY_RECOGNITION']], low_memory=False,
                                            header=None)
         activities_dataframe.columns = ["timestamp", "value"]
-        activities_dataframe.drop_duplicates()
-        activities_dataframe.sort_values(by='timestamp')
+        activities_dataframe = activities_dataframe.drop_duplicates()
+        activities_dataframe = activities_dataframe.sort_values(by='timestamp')
         app_usage_dataframe = pd.read_csv(filenames[data_sources_with_ids['APPLICATION_USAGE']], low_memory=False,
                                           header=None)
         app_usage_dataframe.columns = ["timestamp", "value"]
-        app_usage_dataframe.drop_duplicates()
-        app_usage_dataframe.sort_values(by='timestamp')
+        app_usage_dataframe = app_usage_dataframe.drop_duplicates()
+        app_usage_dataframe = app_usage_dataframe.sort_values(by='timestamp')
         light_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_LIGHT']], low_memory=False, header=None)
         light_dataframe.columns = ["timestamp", "value"]
-        light_dataframe.drop_duplicates()
-        light_dataframe.sort_values(by='timestamp')
+        light_dataframe = light_dataframe.drop_duplicates()
+        light_dataframe = light_dataframe.sort_values(by='timestamp')
         signif_motion_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_SIGNIFICANT_MOTION']],
                                               low_memory=False, header=None)
         signif_motion_dataframe.columns = ["timestamp", "value"]
-        signif_motion_dataframe.drop_duplicates()
-        signif_motion_dataframe.sort_values(by='timestamp')
+        signif_motion_dataframe = signif_motion_dataframe.drop_duplicates()
+        signif_motion_dataframe = signif_motion_dataframe.sort_values(by='timestamp')
         step_detector_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_STEP_DETECTOR']],
                                               low_memory=False,
                                               header=None)
         step_detector_dataframe.columns = ["timestamp", "value"]
-        step_detector_dataframe.drop_duplicates()
-        step_detector_dataframe.sort_values(by='timestamp')
+        step_detector_dataframe = step_detector_dataframe.drop_duplicates()
+        step_detector_dataframe = step_detector_dataframe.sort_values(by='timestamp')
         calls_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALLS']], low_memory=False, header=None)
         calls_dataframe.columns = ["timestamp", "value"]
-        calls_dataframe.drop_duplicates()
-        calls_dataframe.sort_values(by='timestamp')
+        calls_dataframe = calls_dataframe.drop_duplicates()
+        calls_dataframe = calls_dataframe.sort_values(by='timestamp')
         sms_dataframe = pd.read_csv(filenames[data_sources_with_ids['SMS']], low_memory=False, header=None)
         sms_dataframe.columns = ["timestamp", "value"]
-        sms_dataframe.drop_duplicates()
-        sms_dataframe.sort_values(by='timestamp')
+        sms_dataframe = sms_dataframe.drop_duplicates()
+        sms_dataframe = sms_dataframe.sort_values(by='timestamp')
         notifications_dataframe = pd.read_csv(filenames[data_sources_with_ids['NOTIFICATIONS']], low_memory=False,
                                               header=None)
         notifications_dataframe.columns = ["timestamp", "value"]
-        notifications_dataframe.drop_duplicates()
-        notifications_dataframe.sort_values(by='timestamp')
+        notifications_dataframe = notifications_dataframe.drop_duplicates()
+        notifications_dataframe = notifications_dataframe.sort_values(by='timestamp')
         screen_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['SCREEN_STATE']], low_memory=False,
                                              header=None)
         screen_state_dataframe.columns = ["timestamp", "value"]
-        screen_state_dataframe.drop_duplicates()
-        screen_state_dataframe.sort_values(by='timestamp')
+        screen_state_dataframe = screen_state_dataframe.drop_duplicates()
+        screen_state_dataframe = screen_state_dataframe.sort_values(by='timestamp')
         unlock_state_dataframe = pd.read_csv(filenames[data_sources_with_ids['UNLOCK_STATE']], low_memory=False,
                                              header=None)
         unlock_state_dataframe.columns = ["timestamp", "value"]
-        unlock_state_dataframe.drop_duplicates()
-        unlock_state_dataframe.sort_values(by='timestamp')
+        unlock_state_dataframe = unlock_state_dataframe.drop_duplicates()
+        unlock_state_dataframe = unlock_state_dataframe.sort_values(by='timestamp')
         microphone_dataframe = pd.read_csv(filenames[data_sources_with_ids['SOUND_DATA']], low_memory=False)
         microphone_dataframe.columns = ["timestamp", "value"]
-        microphone_dataframe.drop_duplicates()
-        microphone_dataframe.sort_values(by='timestamp')
+        microphone_dataframe = microphone_dataframe.drop_duplicates()
+        microphone_dataframe = microphone_dataframe.sort_values(by='timestamp')
         stored_media_dataframe = pd.read_csv(filenames[data_sources_with_ids['STORED_MEDIA']], low_memory=False,
                                              header=None)
         stored_media_dataframe.columns = ["timestamp", "value"]
-        stored_media_dataframe.drop_duplicates()
-        stored_media_dataframe.sort_values(by='timestamp')
+        stored_media_dataframe = stored_media_dataframe.drop_duplicates()
+        stored_media_dataframe = stored_media_dataframe.sort_values(by='timestamp')
         wifi_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_WIFI']], low_memory=False, header=None)
         wifi_dataframe.columns = ["timestamp", "value"]
-        wifi_dataframe.drop_duplicates()
-        wifi_dataframe.sort_values(by='timestamp')
+        wifi_dataframe = wifi_dataframe.drop_duplicates()
+        wifi_dataframe = wifi_dataframe.sort_values(by='timestamp')
         typing_dataframe = pd.read_csv(filenames[data_sources_with_ids['TYPING']], low_memory=False, header=None)
         typing_dataframe.columns = ["timestamp", "value"]
-        typing_dataframe.drop_duplicates()
-        typing_dataframe.sort_values(by='timestamp')
+        typing_dataframe = typing_dataframe.drop_duplicates()
+        typing_dataframe = typing_dataframe.sort_values(by='timestamp')
         locations_gps_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATION_GPS']], low_memory=False,
                                               header=None)
         locations_gps_dataframe.columns = ["timestamp", "value"]
-        locations_gps_dataframe.drop_duplicates()
-        locations_gps_dataframe.sort_values(by='timestamp')
+        locations_gps_dataframe = locations_gps_dataframe.drop_duplicates()
+        locations_gps_dataframe = locations_gps_dataframe.sort_values(by='timestamp')
         locations_manual_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATIONS_MANUAL']], low_memory=False,
                                                  header=None)
         locations_manual_dataframe.columns = ["timestamp", "value"]
-        locations_manual_dataframe.drop_duplicates()
-        locations_manual_dataframe.sort_values(by='timestamp')
+        locations_manual_dataframe = locations_manual_dataframe.drop_duplicates()
+        locations_manual_dataframe = locations_manual_dataframe.sort_values(by='timestamp')
         calendar_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALENDAR']], low_memory=False, header=None)
         calendar_dataframe.columns = ["timestamp", "value"]
-        calendar_dataframe.drop_duplicates()
-        calendar_dataframe.sort_values(by='timestamp')
+        calendar_dataframe = calendar_dataframe.drop_duplicates()
+        calendar_dataframe = calendar_dataframe.sort_values(by='timestamp')
 
         # endregion
 
