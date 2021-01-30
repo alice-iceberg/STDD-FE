@@ -45,7 +45,7 @@ def drop_columns_from_df(filename, columns):
 
 
 def combine_files(directory, output_columns):
-    if directory!='.DS_Store':
+    if directory != '.DS_Store':
         filenames = os.listdir(directory)
         output_dataframe = pd.DataFrame(columns=output_columns)
 
@@ -148,7 +148,7 @@ def from_timestamp_to_ema_order(timestamp):
     return ema_order
 
 
-def get_ema_time_range(ema_timestamp):
+def get_ema_time_range_30min(ema_timestamp):
     ema_time_range = {
         "time_from": [],
         "time_to": []
@@ -250,6 +250,123 @@ def get_ema_time_range(ema_timestamp):
         ema_time_range["time_to"].append(ema_timestamp - 1800000)  # 30 minutes before EMA
 
         ema_time_range["time_from"].append(ema_timestamp - 1800000)  # 30 minutes before EMA
+        ema_time_range["time_to"].append(ema_timestamp)
+
+    return ema_time_range
+
+
+def get_ema_time_range_1hr(ema_timestamp):
+    ema_time_range = {
+        "time_from": [],
+        "time_to": []
+    }
+
+    ema_order = from_timestamp_to_ema_order(ema_timestamp)
+    if ema_order == 1:
+        ema_time_range["time_from"].append(ema_timestamp - 3 * 14400000)  # 12 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 39600000)  # 11 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 39600000)  # 11 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 36000000)  # 10 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 36000000)  # 10 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 32400000)  # 9 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 32400000)  # 9 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 28800000)  # 8 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 28800000)  # 8 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 25200000)  # 7 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 25200000)  # 7 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 21400000)  # 6 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 21400000)  # 6 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 18000000)  # 5 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 18000000)  # 5 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 10800000)  # 3 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 10800000)  # 3 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 3600000)  # 1 hour before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 3600000)  # 1 hour before EMA
+        ema_time_range["time_to"].append(ema_timestamp)
+    else:
+        ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 10800000)  # 3 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 10800000)  # 3 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 3600000)  # 1 hour before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 3600000)  # 1 hour before EMA
+        ema_time_range["time_to"].append(ema_timestamp)
+
+    return ema_time_range
+
+
+def get_ema_time_range_2hs(ema_timestamp):
+    ema_time_range = {
+        "time_from": [],
+        "time_to": []
+    }
+
+    ema_order = from_timestamp_to_ema_order(ema_timestamp)
+    if ema_order == 1:
+        ema_time_range["time_from"].append(ema_timestamp - 3 * 14400000)  # 12 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 36000000)  # 10 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 36000000)  # 10 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 28800000)  # 8 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 28800000)  # 8 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 21400000)  # 6 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 21400000)  # 6 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp)
+    else:
+        ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 7200000)  # 2 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp)
+
+    return ema_time_range
+
+
+def get_ema_time_range_4hs(ema_timestamp):
+    ema_time_range = {
+        "time_from": [],
+        "time_to": []
+    }
+
+    ema_order = from_timestamp_to_ema_order(ema_timestamp)
+    if ema_order == 1:
+        ema_time_range["time_from"].append(ema_timestamp - 3 * 14400000)  # 12 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 28800000)  # 8 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 28800000)  # 8 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+
+        ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+        ema_time_range["time_to"].append(ema_timestamp)
+    else:
+        ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
         ema_time_range["time_to"].append(ema_timestamp)
 
     return ema_time_range
@@ -483,6 +600,3 @@ def create_mood_features_file(input_filename):
     df_out['mood_gt'] = df.physical_act_gt
 
     df_out.to_csv('mood_features.csv', index=False)
-
-
-

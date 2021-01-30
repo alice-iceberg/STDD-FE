@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 
 import features_extraction
-import ml
 import tools
 
 USER_ID = 89
@@ -96,6 +95,20 @@ output_columns = [
     'light_avg',
     'light_stddev',
     'light_dark_ratio',
+    'num_of_places',
+    'max_dur_at_place',
+    'min_dur_at_place',
+    'avg_dur_at_place',
+    'stdev_dur_at_place',
+    'var_dur_at_place',
+    'dur_of_homestay',
+    'dur_at_work_study',
+    'entropy',
+    'normalized_entropy',
+    'max_dist_from_home',
+    'avg_dist_from_home',
+    'max_dist_btw_places',
+    'total_dist_travelled',
     'signif_motion_freq',
     'steps_num',
     'calls_missed_num',
@@ -284,7 +297,7 @@ def extract_features(user_directory):
 
         for row in ema_table.itertuples():
             print('*************' + row.timestamp + '*************')
-            ema_time_range = tools.get_ema_time_range(int(row.timestamp))
+            ema_time_range = tools.get_ema_time_range_1hr(int(row.timestamp))
 
             # region extracting features related to EMA
 
@@ -351,11 +364,11 @@ def extract_features(user_directory):
                 calendar_features = features_extraction.get_calendar_features(calendar_dataframe,
                                                                               value,
                                                                               ema_time_range['time_to'][i])
-                # print("Extracting locations features")
-                # # locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
-                #                                                                 locations_manual_dataframe,
-                #                                                                 ema_time_range['time_from'],
-                #                                                                 ema_time_range['time_to'])
+                print("Extracting locations features")
+                locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
+                                                                                locations_manual_dataframe,
+                                                                                ema_time_range['time_from'],
+                                                                                ema_time_range['time_to'])
 
                 # endregion
 
@@ -410,19 +423,20 @@ def extract_features(user_directory):
                     'light_avg': light_features['light_avg'],
                     'light_stddev': light_features['light_stddev'],
                     'light_dark_ratio': light_features['light_dark_ratio'],
-                    # 'places_num': locations_features['places_num'],
-                    # 'dur_at_place_max': locations_features['dur_at_place_max'],
-                    # 'dur_at_place_min': locations_features['dur_at_place_min'],
-                    # 'dur_at_place_avg': locations_features['dur_at_place_avg'],
-                    # 'dur_at_place_stdev': locations_features['dur_at_place_stdev'],
-                    # 'entropy': locations_features['entropy'],
-                    # 'normalized_entropy': locations_features['normalized_entropy'],
-                    # 'location_variance': locations_features['location_variance'],
-                    # 'duration_at_home': locations_features['duration_at_home'],
-                    # 'duration_at_work/study': locations_features['duration_at_work/study'],
-                    # 'distance_btw_locations_max': locations_features['distance_btw_locations_max'],
-                    # 'distance_from_home_max': locations_features['distance_from_home_max'],
-                    # 'distance_travelled_total': locations_features['distance_travelled_total'],
+                    'num_of_places': locations_features['num_of_places'],
+                    'max_dur_at_place': locations_features['max_dur_at_place'],
+                    'min_dur_at_place': locations_features['min_dur_at_place'],
+                    'avg_dur_at_place': locations_features['avg_dur_at_place'],
+                    'stdev_dur_at_place': locations_features['stdev_dur_at_place'],
+                    'var_dur_at_place': locations_features['var_dur_at_place'],
+                    'dur_of_homestay': locations_features['dur_of_homestay'],
+                    'dur_at_work_study': locations_features['dur_at_work_study'],
+                    'entropy': locations_features['entropy'],
+                    'normalized_entropy': locations_features['normalized_entropy'],
+                    'max_dist_from_home': locations_features['max_dist_from_home'],
+                    'avg_dist_from_home': locations_features['avg_dist_from_home'],
+                    'max_dist_btw_places': locations_features['max_dist_btw_places'],
+                    'total_dist_travelled': locations_features['total_dist_travelled'],
                     'signif_motion_freq': significant_motion_features,
                     'steps_num': step_detector_features,
                     'calls_missed_num': calls_features['calls_missed_num'],
@@ -805,7 +819,7 @@ def main():
     #
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
-    ml.get_physical_act_features_importance()
+
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
 
