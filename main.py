@@ -805,7 +805,7 @@ def main():
     #
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
-    ml.plot_features_importance_total()
+    ml.get_physical_act_features_importance()
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
 

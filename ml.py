@@ -233,16 +233,29 @@ def create_symptom_clusters_file(filename):
     symptom_clusters_df.to_csv('symptom_clusters.csv', index=False)
 
 
-def get_physical_act_features_importance(user_ids):
+def get_physical_act_features_importance():
+    user_ids = [86, 87, 89, 90, 91, 92, 93, 100, 102, 119, 110, 125]
     for user_id in user_ids:
+        figure_name = 'physical_features(gain)' + str(user_id) + '.png'
         physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
             user_id) + '_physical_act.pkl'
         with open(physical_model_filename, 'rb') as f:
             clf = pickle.load(f)
-            line = clf.get_booster().get_score(importance_type='gain')
-            with open('physical_features_importance.txt', 'a+') as file:
-                file.write(str(line))
-                file.write('\n')
+            clf.get_booster().feature_names = ['still_freq',
+                                               'walking_freq',
+                                               'running_freq',
+                                               'on_bicycle_freq',
+                                               'in_vehicle_freq',
+                                               'signif_motion_freq',
+                                               'steps_num',
+                                               'weekday',
+                                               'gender']
+            xgboost.plot_importance(clf.get_booster(), importance_type='gain', max_num_features=15,
+                                    show_values=False)
+            pyplot.savefig(figure_name, bbox_inches='tight')
+            # with open('physical_features_importance.txt', 'a+') as file:
+            #     file.write(str(line))
+            #     file.write('\n')
 
 
 def get_mood_features_importance(user_ids):
@@ -333,10 +346,11 @@ def get_mood_features_importance(user_ids):
 
 
 def plot_mood_features_importance():
-    user_ids = [86]
+    user_ids = [87, 89, 90, 91, 92, 93, 100, 102, 119, 110, 125]
     for user_id in user_ids:
-        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(user_id) + '_mood.pkl'
-        with open(physical_model_filename, 'rb') as f:
+        figure_name = 'mood_features(gain)' + str(user_id) + '.png'
+        mood_model_name = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(user_id) + '_mood.pkl'
+        with open(mood_model_name, 'rb') as f:
             clf = pickle.load(f)
             clf.get_booster().feature_names = ['still_freq',
                                                'walking_freq',
@@ -414,9 +428,9 @@ def plot_mood_features_importance():
                                                'windspeedKmph',
                                                'weekday',
                                                'gender']
-            xgboost.plot_importance(clf.get_booster(), importance_type='total_gain', max_num_features=15,
+            xgboost.plot_importance(clf.get_booster(), importance_type='gain', max_num_features=15,
                                     show_values=False)
-            pyplot.savefig('mood_features(total_gain)B.png', bbox_inches='tight')
+            pyplot.savefig(figure_name, bbox_inches='tight')
 
 
 def plot_physical_act_features_importance():
