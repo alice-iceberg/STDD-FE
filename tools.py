@@ -60,7 +60,7 @@ def combine_files(directory, output_columns):
 
 
 def in_range(number, start, end):
-    if start < number <= end:
+    if int(start) < int(number) <= int(end):
         return True
     else:
         return False

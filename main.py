@@ -1,6 +1,8 @@
 import statistics
 import time
 from datetime import datetime
+import concurrent.futures
+import os
 
 import numpy as np
 import pandas as pd
@@ -201,7 +203,7 @@ def extract_features(user_directory):
         user_id = int(user_directory.split('-')[-1])
         filenames = tools.create_filenames(user_id, data_sources)
         output_table = pd.DataFrame(columns=output_columns)
-        output_filename = f'extracted_features_{user_id}.csv'
+        output_filename = f'extracted_features_1hr/extracted_features_{user_id}.csv'
         print(f'Feature extraction started for {user_directory}')
 
         ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
@@ -367,8 +369,8 @@ def extract_features(user_directory):
                 print("Extracting locations features")
                 locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
                                                                                 locations_manual_dataframe,
-                                                                                ema_time_range['time_from'],
-                                                                                ema_time_range['time_to'])
+                                                                                value,
+                                                                                ema_time_range['time_to'][i])
 
                 # endregion
 
@@ -814,11 +816,11 @@ def remove_missing_values_rows(filename, threshold):
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
-    # with concurrent.futures.ProcessPoolExecutor() as executor:
-    #     results = [executor.submit(add_weather_data, filename) for filename in os.listdir(data_directory)]
-    #
-    # for f in concurrent.futures.as_completed(results):
-    #     print(f.result())
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = [executor.submit(extract_features, filename) for filename in os.listdir(data_directory)]
+
+    for f in concurrent.futures.as_completed(results):
+        print(f.result())
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')

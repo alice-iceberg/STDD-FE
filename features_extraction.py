@@ -34,23 +34,22 @@ def get_activity_recognition_features(table, start_time, end_time):
         "on_bicycle_freq": 0,
         "in_vehicle_freq": 0
     }
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in table.itertuples():
-        timestamp = int(row.timestamp)
-
-        if tools.in_range(int(timestamp), start_time, end_time):
-            if row.value.split(" ")[-1] == 'EXIT':  # todo: solve the problem with only exit values at the beginning
-                activity_type = row.value.split(" ")[1]
-                if activity_type == 'STILL':
-                    activities_features['still_freq'] += 1
-                elif activity_type == 'WALKING':
-                    activities_features['walking_freq'] += 1
-                elif activity_type == 'RUNNING':
-                    activities_features['running_freq'] += 1
-                elif activity_type == 'ON_BICYCLE':
-                    activities_features['on_bicycle_freq'] += 1
-                elif activity_type == 'IN_VEHICLE':
-                    activities_features['in_vehicle_freq'] += 1
+    for row in df_filtered.itertuples():
+        if row.value.split(" ")[-1] == 'EXIT':  # todo: solve the problem with only exit values at the beginning
+            activity_type = row.value.split(" ")[1]
+            if activity_type == 'STILL':
+                activities_features['still_freq'] += 1
+            elif activity_type == 'WALKING':
+                activities_features['walking_freq'] += 1
+            elif activity_type == 'RUNNING':
+                activities_features['running_freq'] += 1
+            elif activity_type == 'ON_BICYCLE':
+                activities_features['on_bicycle_freq'] += 1
+            elif activity_type == 'IN_VEHICLE':
+                activities_features['in_vehicle_freq'] += 1
 
     return activities_features
 
@@ -101,12 +100,15 @@ def get_app_usage_features(table, start_time, end_time):
 
     apps = []
 
-    for row in table.itertuples():
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+
+    for row in df_filtered.itertuples():
         start = row.value.split(" ")[0]
         end = row.value.split(" ")[1]
         pckg_name = row.value.split(" ")[2]
         duration = int(end) - int(start)
-        if tools.in_range(int(start), start_time, end_time) and duration > 0:
+        if duration > 0:
             app_usage_features['apps_total_num'] += 1
             if pckg_name not in apps:
                 apps.append(pckg_name)
@@ -179,12 +181,12 @@ def get_light_features(table, start_time, end_time):
         'light_dark_ratio': np.NaN
     }
     light_data = []
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
+    for row in df_filtered.itertuples(index=False):
         value = row.value.split(" ")[1]
-        if tools.in_range(int(timestamp), start_time, end_time):
-            light_data.append(float(value))
+        light_data.append(float(value))
 
     if light_data.__len__() > 0:
         light_features['light_min'] = min(light_data)
@@ -206,13 +208,12 @@ def get_signif_motion_features(table, start_time, end_time):
     :param end_time: end time of needed range
     :return: number of times significant motion sensor is triggered
     """
-
     signif_motion_freq = 0
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
-        if tools.in_range(int(timestamp), start_time, end_time):
-            signif_motion_freq += 1
+    for row in df_filtered.itertuples(index=False):
+        signif_motion_freq += 1
 
     return signif_motion_freq
 
@@ -226,11 +227,10 @@ def get_step_detector_features(table, start_time, end_time):
     :return: number of steps
     """
     num_of_steps = 0
-
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
-        if tools.in_range(int(timestamp), start_time, end_time):
-            num_of_steps += 1
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+    for _ in df_filtered.itertuples(index=False):
+        num_of_steps += 1
 
     return num_of_steps
 
@@ -262,21 +262,22 @@ def get_calls_features(table, start_time, end_time):
     in_calls_dur = []
     out_calls_dur = []
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+
+    for row in df_filtered.itertuples(index=False):
         start = row.value.split(" ")[0]
         end = row.value.split(" ")[1]
         call_type = row.value.split(" ")[2]
 
-        if tools.in_range(int(timestamp), start_time, end_time):
-            if call_type == "IN":
-                in_calls_dur.append(int(end) - int(start))
-                calls_features['calls_in_num'] += 1
-            elif call_type == "OUT":
-                out_calls_dur.append(int(end) - int(start))
-                calls_features['calls_out_num'] += 1
-            else:
-                calls_features['calls_missed_num'] += 1
+        if call_type == "IN":
+            in_calls_dur.append(int(end) - int(start))
+            calls_features['calls_in_num'] += 1
+        elif call_type == "OUT":
+            out_calls_dur.append(int(end) - int(start))
+            calls_features['calls_out_num'] += 1
+        else:
+            calls_features['calls_missed_num'] += 1
 
     if calls_features['calls_out_num'] > 0:
         calls_features['calls_min_out_dur'] = min(out_calls_dur)
@@ -313,17 +314,18 @@ def get_sms_features(table, start_time, end_time):
     unique_contacts = []
     chars_arr = []
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-        if tools.in_range(int(timestamp), start_time, end_time):
-            sms_features['sms_total_num'] += 1
-            contact = row.value.split(" ")[1]
-            chars = int(row.value.split(" ")[2])
-            chars_arr.append(chars)
+    for row in df_filtered.itertuples(index=False):
 
-            if contact not in unique_contacts:
-                unique_contacts.append(contact)
+        sms_features['sms_total_num'] += 1
+        contact = row.value.split(" ")[1]
+        chars = int(row.value.split(" ")[2])
+        chars_arr.append(chars)
+
+        if contact not in unique_contacts:
+            unique_contacts.append(contact)
 
     if sms_features['sms_total_num'] > 0:
         sms_features['sms_min_chars'] = min(chars_arr)
@@ -354,18 +356,16 @@ def get_notifications_features(table, start_time, end_time):
     }
 
     decision_times = []
-
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
-
-        if tools.in_range(int(timestamp), start_time, end_time):
-            notification_flag = row.value.split(" ")[-1]
-            if notification_flag == "ARRIVED":
-                notifications_features["notif_arrived_num"] += 1
-            elif notification_flag == "DECISION_TIME":
-                decision_times.append(int(row.value.split(" ")[1]) - int(row.value.split(" ")[0]))
-            elif notification_flag == "CLICKED":
-                notifications_features["notif_clicked_num"] += 1
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+    for row in df_filtered.itertuples(index=False):
+        notification_flag = row.value.split(" ")[-1]
+        if notification_flag == "ARRIVED":
+            notifications_features["notif_arrived_num"] += 1
+        elif notification_flag == "DECISION_TIME":
+            decision_times.append(int(row.value.split(" ")[1]) - int(row.value.split(" ")[0]))
+        elif notification_flag == "CLICKED":
+            notifications_features["notif_clicked_num"] += 1
 
     if len(decision_times) > 0:
         notifications_features["notif_min_dec_time"] = min(decision_times)
@@ -392,15 +392,16 @@ def get_screen_state_features(table, start_time, end_time):
         "screen_off_freq": 0
     }
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-        if tools.in_range(int(timestamp), start_time, end_time):
-            screen_state_flag = row.value.split(" ")[-1]
-            if screen_state_flag == "ON":
-                screen_features["screen_on_freq"] += 1
-            else:
-                screen_features["screen_off_freq"] += 1
+    for row in df_filtered.itertuples(index=False):
+
+        screen_state_flag = row.value.split(" ")[-1]
+        if screen_state_flag == "ON":
+            screen_features["screen_on_freq"] += 1
+        else:
+            screen_features["screen_off_freq"] += 1
 
     return screen_features
 
@@ -418,16 +419,16 @@ def get_unlock_state_features(table, start_time, end_time):
         "lock_freq": 0,
         "unlock_freq": 0,
     }
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
+    for row in df_filtered.itertuples(index=False):
 
-        if tools.in_range(int(timestamp), start_time, end_time):
-            unlock_state_flag = row.value.split(" ")[-1]
-            if unlock_state_flag == "LOCK":
-                unlock_state_features["lock_freq"] += 1
-            else:
-                unlock_state_features["unlock_freq"] += 1
+        unlock_state_flag = row.value.split(" ")[-1]
+        if unlock_state_flag == "LOCK":
+            unlock_state_features["lock_freq"] += 1
+        else:
+            unlock_state_features["unlock_freq"] += 1
 
     return unlock_state_features
 
@@ -457,15 +458,15 @@ def get_microphone_features(table, start_time, end_time):
     energies = []
     pitches = []
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+    for row in df_filtered.itertuples(index=False):
 
-        if tools.in_range(int(timestamp), start_time, end_time):
-            microphone_flag = row.value.split(" ")[-1]
-            if microphone_flag == "ENERGY":
-                energies.append(float(row.value.split(" ")[1]))
-            else:
-                pitches.append(float(row.value.split(" ")[1]))
+        microphone_flag = row.value.split(" ")[-1]
+        if microphone_flag == "ENERGY":
+            energies.append(float(row.value.split(" ")[1]))
+        else:
+            pitches.append(float(row.value.split(" ")[1]))
 
     microphone_features["pitch_num"] = len(pitches)
     if microphone_features["pitch_num"] > 0:
@@ -501,18 +502,16 @@ def get_stored_media_features(table, start_time, end_time):
         "videos_num": np.NaN,
         "music_num": np.NaN
     }
-
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
-
-        if tools.in_range(int(timestamp), start_time, end_time):
-            media_flag = row.value.split(" ")[-1]
-            if media_flag == "IMAGE":
-                stored_media_features["images_num"] = row.value.split(" ")[1]
-            elif media_flag == "VIDEO":
-                stored_media_features["videos_num"] = row.value.split(" ")[1]
-            else:
-                stored_media_features["music_num"] = row.value.split(" ")[1]
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+    for row in df_filtered.itertuples(index=False):
+        media_flag = row.value.split(" ")[-1]
+        if media_flag == "IMAGE":
+            stored_media_features["images_num"] = row.value.split(" ")[1]
+        elif media_flag == "VIDEO":
+            stored_media_features["videos_num"] = row.value.split(" ")[1]
+        else:
+            stored_media_features["music_num"] = row.value.split(" ")[1]
 
     return stored_media_features
 
@@ -527,13 +526,12 @@ def get_wifi_features(table, start_time, end_time):
     """
 
     unique_wifi_bssid = []
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
-
-        if tools.in_range(int(timestamp), start_time, end_time):
-            values = row.value.split(" ")[1].replace("[", "").replace("]", "").split(",")
-            for value in values:
+    for row in df_filtered.itertuples(index=False):
+        values = row.value.split(" ")[1].replace("[", "").replace("]", "").split(",")
+        for value in values:
                 if value not in unique_wifi_bssid:
                     unique_wifi_bssid.append(value)
 
@@ -560,16 +558,15 @@ def get_typing_features(table, start_time, end_time):
 
     typing_durations = []
     unique_apps = []
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in table.itertuples(index=False):
-        timestamp = row.value.split(" ")[0]
-
-        if tools.in_range(int(timestamp), start_time, end_time):
-            typing_duration = int(row.value.split(" ")[1]) - int(row.value.split(" ")[0])
-            if typing_duration > 0:
-                typing_durations.append(typing_duration)
-            if row.value.split(" ")[-1] not in unique_apps:
-                unique_apps.append(row.value.split(" ")[-1])
+    for row in df_filtered.itertuples(index=False):
+        typing_duration = int(row.value.split(" ")[1]) - int(row.value.split(" ")[0])
+        if typing_duration > 0:
+            typing_durations.append(typing_duration)
+        if row.value.split(" ")[-1] not in unique_apps:
+            unique_apps.append(row.value.split(" ")[-1])
 
     typing_features["typing_freq"] = len(typing_durations)
     typing_features["typing_unique_apps_num"] = len(unique_apps)
@@ -588,11 +585,10 @@ def get_typing_features(table, start_time, end_time):
 def get_calendar_features(table, start_time, end_time):
     # todo: recheck how many calendar records are for each EMA
     num_events = np.NaN
-
-    for row in table.itertuples(index=False):
-        timestamp = row.timestamp
-        if tools.in_range(int(timestamp), start_time, end_time):
-            num_events = row.value.split(" ")[1]
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+    for row in df_filtered.itertuples(index=False):
+        num_events = row.value.split(" ")[1]
 
     return num_events
 
@@ -860,14 +856,10 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
     # region location clusters
     df_gps = table_gps['value'].str.split(' ', n=5, expand=True)
     df_gps.columns = ['timestamp', 'lat', 'lng', 'speed', 'accuracy', 'altitude']
-    df_gps = df_gps.sort_values(by=['timestamp'])
-
-    X = []
-    timestamps = []
-    for row in df_gps.itertuples(index=False):
-        if tools.in_range(int(row.timestamp), start_time, end_time):
-            X.append([row.lat, row.lng])
-            timestamps.append(row.timestamp)
+    df_gps['timestamp'] = pd.to_numeric(df_gps['timestamp'])
+    df_filtered = df_gps.query(f'timestamp>{start_time} & timestamp<{end_time}')
+    X = df_filtered.iloc[:, [1, 2]].values
+    timestamps = df_filtered['timestamp']
 
     X = np.array(X).astype('float64')
     timestamps = np.array(timestamps).astype('int64')
