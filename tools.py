@@ -314,7 +314,7 @@ def get_ema_time_range_1hr(ema_timestamp):
     return ema_time_range
 
 
-def get_ema_time_range_2hs(ema_timestamp):
+def get_ema_time_range_2hrs(ema_timestamp):
     ema_time_range = {
         "time_from": [],
         "time_to": []
@@ -349,7 +349,7 @@ def get_ema_time_range_2hs(ema_timestamp):
     return ema_time_range
 
 
-def get_ema_time_range_4hs(ema_timestamp):
+def get_ema_time_range_4hrs(ema_timestamp):
     ema_time_range = {
         "time_from": [],
         "time_to": []

@@ -1093,17 +1093,18 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
         total_duration = sum(durations)
         entropy = 0
 
-        for k, v in total_time_per_label.items():
-            percentage_per_label[k] = (v / total_duration)
-            if percentage_per_label[k] > 0:
-                log_percentage_per_label[k] = np.math.log(percentage_per_label[k], 10)  # log10P
-                entropy += percentage_per_label[k] * log_percentage_per_label[
-                    k]
-            else:
-                log_percentage_per_label[k] = 0
-                entropy += 0
+        if total_duration > 0:
+            for k, v in total_time_per_label.items():
+                percentage_per_label[k] = (v / total_duration)
+                if percentage_per_label[k] > 0:
+                    log_percentage_per_label[k] = np.math.log(percentage_per_label[k], 10)  # log10P
+                    entropy += percentage_per_label[k] * log_percentage_per_label[
+                        k]
+                else:
+                    log_percentage_per_label[k] = 0
+                    entropy += 0
 
-        location_features['entropy'] = abs(entropy)
+            location_features['entropy'] = abs(entropy)
         # endregion
 
         # region normalized entropy

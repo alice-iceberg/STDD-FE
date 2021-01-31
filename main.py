@@ -203,7 +203,7 @@ def extract_features(user_directory):
         user_id = int(user_directory.split('-')[-1])
         filenames = tools.create_filenames(user_id, data_sources)
         output_table = pd.DataFrame(columns=output_columns)
-        output_filename = f'extracted_features_1hr/extracted_features_{user_id}.csv'
+        output_filename = f'extracted_features_30mins/extracted_features_{user_id}.csv'
         print(f'Feature extraction started for {user_directory}')
 
         ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
@@ -300,7 +300,7 @@ def extract_features(user_directory):
 
         for row in ema_table.itertuples():
             print('*************' + row.timestamp + '*************')
-            ema_time_range = tools.get_ema_time_range_1hr(int(row.timestamp))
+            ema_time_range = tools.get_ema_time_range_30min(int(row.timestamp))
 
             # region extracting features related to EMA
 
