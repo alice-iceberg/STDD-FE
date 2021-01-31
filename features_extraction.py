@@ -937,7 +937,7 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                 closest_lat = lat_lng_no_outliers[min_distance_index][0]
                 closest_lng = lat_lng_no_outliers[min_distance_index][1]
                 closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
-                home_cluster = labels[closest_loc_index_X]
+                home_cluster = int(labels[closest_loc_index_X][0])
 
             else:
                 home_cluster = -1
@@ -983,12 +983,12 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
 
                 total_time_per_label[label] = sum(time_per_label)
                 time_per_label = []
-
-        location_features['max_dur_at_place'] = total_time_per_label[
-            max(total_time_per_label.items(), key=operator.itemgetter(1))[0]]
-        location_features['min_dur_at_place'] = total_time_per_label[
-            min(total_time_per_label.items(), key=operator.itemgetter(1))[0]]
-        location_features['avg_dur_at_place'] = mean(total_time_per_label[k] for k in total_time_per_label)
+        if len(total_time_per_label) != 0:
+            location_features['max_dur_at_place'] = total_time_per_label[
+                max(total_time_per_label.items(), key=operator.itemgetter(1))[0]]
+            location_features['min_dur_at_place'] = total_time_per_label[
+                min(total_time_per_label.items(), key=operator.itemgetter(1))[0]]
+            location_features['avg_dur_at_place'] = mean(total_time_per_label[k] for k in total_time_per_label)
         if home_cluster != -1:
             location_features['dur_of_homestay'] = total_time_per_label[int(home_cluster)]
 
@@ -1016,14 +1016,15 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     haversine(manual_locations['univ'], [float(lat), float(lng)], Unit.METERS))
 
             # getting index of the closest point to univ
-            if min(all_distances_from_univ) <= 200:
-                min_distance_index = all_distances_from_univ.index(min(all_distances_from_univ))
-                closest_lat = lat_lng_no_outliers[min_distance_index][0]
-                closest_lng = lat_lng_no_outliers[min_distance_index][1]
-                closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
-                univ_cluster = labels[closest_loc_index_X]
+            if len(all_distances_from_univ) > 0:
+                if min(all_distances_from_univ) <= 200:
+                    min_distance_index = all_distances_from_univ.index(min(all_distances_from_univ))
+                    closest_lat = lat_lng_no_outliers[min_distance_index][0]
+                    closest_lng = lat_lng_no_outliers[min_distance_index][1]
+                    closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
+                    univ_cluster = labels[closest_loc_index_X]
 
-                location_features['dur_at_work_study'] = total_time_per_label[int(univ_cluster)]
+                    location_features['dur_at_work_study'] = total_time_per_label[int(univ_cluster)]
         elif not pd.isna(manual_locations['work'][0]) & pd.isna(manual_locations['univ'][0]):  # if only work place
             all_distances_from_work = []
             for lat, lng in lat_lng_no_outliers:
@@ -1031,14 +1032,15 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     haversine(manual_locations['work'], [float(lat), float(lng)], Unit.METERS))
 
             # getting index of the closest point to work
-            if min(all_distances_from_work) <= 200:
-                min_distance_index = all_distances_from_work.index(min(all_distances_from_work))
-                closest_lat = lat_lng_no_outliers[min_distance_index][0]
-                closest_lng = lat_lng_no_outliers[min_distance_index][1]
-                closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
-                work_cluster = labels[closest_loc_index_X]
+            if len(all_distances_from_work) > 0:
+                if min(all_distances_from_work) <= 200:
+                    min_distance_index = all_distances_from_work.index(min(all_distances_from_work))
+                    closest_lat = lat_lng_no_outliers[min_distance_index][0]
+                    closest_lng = lat_lng_no_outliers[min_distance_index][1]
+                    closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
+                    work_cluster = labels[closest_loc_index_X]
 
-                location_features['dur_at_work_study'] = total_time_per_label[int(work_cluster)]
+                    location_features['dur_at_work_study'] = total_time_per_label[int(work_cluster)]
 
         if not pd.isna(manual_locations['univ'][0]) and not (
         pd.isna(manual_locations['work'][0])):  # if only both univ and work
@@ -1048,13 +1050,16 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     haversine(manual_locations['univ'], [float(lat), float(lng)], Unit.METERS))
 
             # getting index of the closest point to univ
-            if min(all_distances_from_univ) <= 200:
-                min_distance_index = all_distances_from_univ.index(min(all_distances_from_univ))
-                closest_lat = lat_lng_no_outliers[min_distance_index][0]
-                closest_lng = lat_lng_no_outliers[min_distance_index][1]
-                closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
-                univ_cluster = labels[closest_loc_index_X]
-                univ_duration = total_time_per_label[int(univ_cluster)]
+            if len(all_distances_from_univ) > 0:
+                if min(all_distances_from_univ) <= 200:
+                    min_distance_index = all_distances_from_univ.index(min(all_distances_from_univ))
+                    closest_lat = lat_lng_no_outliers[min_distance_index][0]
+                    closest_lng = lat_lng_no_outliers[min_distance_index][1]
+                    closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
+                    univ_cluster = labels[closest_loc_index_X]
+                    univ_duration = total_time_per_label[int(univ_cluster)]
+                else:
+                    univ_duration = 0
             else:
                 univ_duration = 0
 
@@ -1064,13 +1069,16 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     haversine(manual_locations['work'], [float(lat), float(lng)], Unit.METERS))
 
             # getting index of the closest point to work
-            if min(all_distances_from_work) <= 200:
-                min_distance_index = all_distances_from_work.index(min(all_distances_from_work))
-                closest_lat = lat_lng_no_outliers[min_distance_index][0]
-                closest_lng = lat_lng_no_outliers[min_distance_index][1]
-                closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
-                work_cluster = labels[closest_loc_index_X]
-                work_duration = total_time_per_label[int(work_cluster)]
+            if len(all_distances_from_work) > 0:
+                if min(all_distances_from_work) <= 200:
+                    min_distance_index = all_distances_from_work.index(min(all_distances_from_work))
+                    closest_lat = lat_lng_no_outliers[min_distance_index][0]
+                    closest_lng = lat_lng_no_outliers[min_distance_index][1]
+                    closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
+                    work_cluster = labels[closest_loc_index_X]
+                    work_duration = total_time_per_label[int(work_cluster)]
+                else:
+                    work_duration = 0
             else:
                 work_duration = 0
 
@@ -1087,7 +1095,7 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
 
         for k, v in total_time_per_label.items():
             percentage_per_label[k] = (v / total_duration)
-            if percentage_per_label[k] != 0:
+            if percentage_per_label[k] > 0:
                 log_percentage_per_label[k] = np.math.log(percentage_per_label[k], 10)  # log10P
                 entropy += percentage_per_label[k] * log_percentage_per_label[
                     k]
