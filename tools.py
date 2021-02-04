@@ -51,12 +51,12 @@ def combine_files(directory, output_columns):
 
         for filename in filenames:
             if filename != '.DS_Store':
-                filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/{filename}'
+                filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features_4hrs/{filename}'
                 print("Combining", filename)
-                df = pd.read_csv(filename, header=None, encoding='utf-8')
+                df = pd.read_csv(filename, header=None, skiprows=1, encoding='utf-8')
                 output_dataframe = output_dataframe.append(df)
 
-        output_dataframe.to_csv('all_extracted_features.csv', index=False)
+        output_dataframe.to_csv('all_extracted_features_4hrs.csv', index=False)
 
 
 def in_range(number, start, end):

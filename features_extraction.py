@@ -32,25 +32,48 @@ def get_activity_recognition_features(table, start_time, end_time):
         "walking_freq": 0,
         "running_freq": 0,
         "on_bicycle_freq": 0,
-        "in_vehicle_freq": 0
+        "in_vehicle_freq": 0,
+        "still_dur": 0,
+        "walking_dur": 0,
+        "running_dur": 0,
+        "on_bicycle_dur": 0,
+        "in_vehicle_dur": 0
     }
     table['timestamp'] = pd.to_numeric(table['timestamp'])
     df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    for row in df_filtered.itertuples():
-        if row.value.split(" ")[-1] == 'EXIT':  # todo: solve the problem with only exit values at the beginning
-            activity_type = row.value.split(" ")[1]
-            if activity_type == 'STILL':
-                activities_features['still_freq'] += 1
-            elif activity_type == 'WALKING':
-                activities_features['walking_freq'] += 1
-            elif activity_type == 'RUNNING':
-                activities_features['running_freq'] += 1
-            elif activity_type == 'ON_BICYCLE':
-                activities_features['on_bicycle_freq'] += 1
-            elif activity_type == 'IN_VEHICLE':
-                activities_features['in_vehicle_freq'] += 1
+    # leave EXIT flag only
+    df_filtered = df_filtered['value'].str.split(' ', n=3, expand=True)
+    df_filtered.columns = ['timestamp', 'activity', 'flag']
+    df_filtered = df_filtered.query('flag=="EXIT"')
 
+    prev_timestamp = 0
+
+    for row in df_filtered.itertuples():
+        activity_type = row.activity
+        timestamp = int(row.timestamp)
+        if activity_type == 'STILL':
+            activities_features['still_freq'] += 1
+            if prev_timestamp != 0:
+                activities_features['still_dur'] += timestamp - prev_timestamp
+        elif activity_type == 'WALKING':
+            activities_features['walking_freq'] += 1
+            if prev_timestamp != 0:
+                activities_features['walking_dur'] += timestamp - prev_timestamp
+        elif activity_type == 'RUNNING':
+            activities_features['running_freq'] += 1
+            if prev_timestamp != 0:
+                activities_features['running_dur'] += timestamp - prev_timestamp
+        elif activity_type == 'ON_BICYCLE':
+            activities_features['on_bicycle_freq'] += 1
+            if prev_timestamp != 0:
+                activities_features['on_bicycle_dur'] += timestamp - prev_timestamp
+        elif activity_type == 'IN_VEHICLE':
+            activities_features['in_vehicle_freq'] += 1
+            if prev_timestamp != 0:
+                activities_features['in_vehicle_dur'] += timestamp - prev_timestamp
+
+        prev_timestamp = timestamp
     return activities_features
 
 
@@ -1043,7 +1066,7 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     location_features['dur_at_work_study'] = total_time_per_label[int(work_cluster)]
 
         if not pd.isna(manual_locations['univ'][0]) and not (
-        pd.isna(manual_locations['work'][0])):  # if only both univ and work
+                pd.isna(manual_locations['work'][0])):  # if only both univ and work
             all_distances_from_univ = []
             for lat, lng in lat_lng_no_outliers:
                 all_distances_from_univ.append(

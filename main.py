@@ -1,8 +1,6 @@
 import statistics
 import time
 from datetime import datetime
-import concurrent.futures
-import os
 
 import numpy as np
 import pandas as pd
@@ -64,6 +62,11 @@ output_columns = [
     'running_freq',
     'on_bicycle_freq',
     'in_vehicle_freq',
+    'still_dur',
+    'walking_dur',
+    'running_dur',
+    'on_bicycle_dur',
+    'in_vehicle_dur',
     'app_entertainment_music_dur',
     'app_utilities_dur',
     'app_shopping_dur',
@@ -393,6 +396,11 @@ def extract_features(user_directory):
                     'running_freq': activities_features['running_freq'],
                     'on_bicycle_freq': activities_features['on_bicycle_freq'],
                     'in_vehicle_freq': activities_features['in_vehicle_freq'],
+                    'still_dur': activities_features['still_dur'],
+                    'walking_dur': activities_features['walking_dur'],
+                    'running_dur': activities_features['running_dur'],
+                    'on_bicycle_dur': activities_features['on_bicycle_dur'],
+                    'in_vehicle_dur': activities_features['in_vehicle_dur'],
                     'app_entertainment_music_dur': app_usage_features['app_entertainment_music_dur'],
                     'app_utilities_dur': app_usage_features['app_utilities_dur'],
                     'app_shopping_dur': app_usage_features['app_shopping_dur'],
@@ -817,11 +825,13 @@ def remove_missing_values_rows(filename, threshold):
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(extract_features, filename) for filename in os.listdir(data_directory)]
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #     results = [executor.submit(extract_features, filename) for filename in os.listdir(data_directory)]
+    #
+    # for f in concurrent.futures.as_completed(results):
+    #     print(f.result())
 
-    for f in concurrent.futures.as_completed(results):
-        print(f.result())
+    tools.combine_files('extracted_features_30mins', output_columns)
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
