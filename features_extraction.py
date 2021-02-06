@@ -468,8 +468,6 @@ def get_microphone_features(table, start_time, end_time):
 
     microphone_features = {
         "pitch_num": 0,
-        "pitch_min": np.NaN,
-        "pitch_max": np.NaN,
         "pitch_avg": np.NaN,
         "pitch_stdev": np.NaN,
         "sound_energy_min": np.NaN,
@@ -493,8 +491,6 @@ def get_microphone_features(table, start_time, end_time):
 
     microphone_features["pitch_num"] = len(pitches)
     if microphone_features["pitch_num"] > 0:
-        microphone_features["pitch_min"] = min(pitches)
-        microphone_features["pitch_max"] = max(pitches)
         microphone_features["pitch_avg"] = statistics.mean(pitches)
 
         if microphone_features["pitch_num"] > 1:
@@ -627,7 +623,7 @@ def get_locations_features_old(table, manual_locations_table, start_time, end_ti
     """
 
     location_features = {
-        'places_num': np.NaN,
+        "places_num": np.NaN,
         "dur_at_place_max": np.NaN,
         "dur_at_place_min": np.NaN,
         "dur_at_place_avg": np.NaN,
@@ -665,8 +661,22 @@ def get_locations_features_old(table, manual_locations_table, start_time, end_ti
     lat_lng = np.array(lat_lng).astype('float64')
     timestamps = np.array(timestamps).astype('int64')
 
+    # region location variance
     if len(lat_lng) > 3:
-        location_features["location_variance"] = lat_lng.var()
+        lat_arr = []
+        lng_arr = []
+        for i in lat_lng:
+            lat_arr.append(i[0])
+            lng_arr.append(i[1])
+        lat_arr = np.array(lat_arr).astype('float64')
+        lng_arr = np.array(lng_arr).astype('float64')
+
+        lat_var = lat_arr.var()
+        lng_var = lng_arr.var()
+
+        location_features["location_variance"] = math.log10(lat_var*lat_var + lng_var*lng_var)
+
+    # endregion
 
         while True:
             temp = num_clusters
