@@ -16,7 +16,7 @@ cat_list = pd.read_csv('Cat_group.csv')
 def create_filenames(user_id, data_source_ids):
     filenames = {}
     for item, value in enumerate(data_source_ids):
-        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/4-{user_id}/{user_id}_{value}.csv'
+        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/5people/4-{user_id}/{user_id}_{value}.csv'
         filenames[value] = _filename
 
     return filenames
@@ -51,12 +51,12 @@ def combine_files(directory, output_columns):
 
         for filename in filenames:
             if filename != '.DS_Store':
-                filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features_4hrs/{filename}'
+                filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/{filename}'
                 print("Combining", filename)
                 df = pd.read_csv(filename, header=None, skiprows=1, encoding='utf-8')
                 output_dataframe = output_dataframe.append(df)
 
-        output_dataframe.to_csv('all_extracted_features_4hrs.csv', index=False)
+        output_dataframe.to_csv('extracted_features.csv', index=False)
 
 
 def in_range(number, start, end):
@@ -600,3 +600,12 @@ def create_mood_features_file(input_filename):
     df_out['mood_gt'] = df.physical_act_gt
 
     df_out.to_csv('mood_features.csv', index=False)
+
+
+def remove_mfcc_data(filename, new_filename):
+    with open(new_filename, 'a+') as write_to:
+        with open(filename, 'r') as file:
+            for line in file:
+                if line[-2] != '"':
+                    write_to.write(line)
+

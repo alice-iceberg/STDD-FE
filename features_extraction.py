@@ -43,37 +43,38 @@ def get_activity_recognition_features(table, start_time, end_time):
     df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
     # leave EXIT flag only
-    df_filtered = df_filtered['value'].str.split(' ', n=3, expand=True)
-    df_filtered.columns = ['timestamp', 'activity', 'flag']
-    df_filtered = df_filtered.query('flag=="EXIT"')
+    if len(df_filtered) != 0:
+        df_filtered = df_filtered['value'].str.split(' ', n=3, expand=True)
+        df_filtered.columns = ['timestamp', 'activity', 'flag']
+        df_filtered = df_filtered.query('flag=="EXIT"')
 
-    prev_timestamp = 0
+        prev_timestamp = 0
 
-    for row in df_filtered.itertuples():
-        activity_type = row.activity
-        timestamp = int(row.timestamp)
-        if activity_type == 'STILL':
-            activities_features['still_freq'] += 1
-            if prev_timestamp != 0:
-                activities_features['still_dur'] += timestamp - prev_timestamp
-        elif activity_type == 'WALKING':
-            activities_features['walking_freq'] += 1
-            if prev_timestamp != 0:
-                activities_features['walking_dur'] += timestamp - prev_timestamp
-        elif activity_type == 'RUNNING':
-            activities_features['running_freq'] += 1
-            if prev_timestamp != 0:
-                activities_features['running_dur'] += timestamp - prev_timestamp
-        elif activity_type == 'ON_BICYCLE':
-            activities_features['on_bicycle_freq'] += 1
-            if prev_timestamp != 0:
-                activities_features['on_bicycle_dur'] += timestamp - prev_timestamp
-        elif activity_type == 'IN_VEHICLE':
-            activities_features['in_vehicle_freq'] += 1
-            if prev_timestamp != 0:
-                activities_features['in_vehicle_dur'] += timestamp - prev_timestamp
+        for row in df_filtered.itertuples():
+            activity_type = row.activity
+            timestamp = int(row.timestamp)
+            if activity_type == 'STILL':
+                activities_features['still_freq'] += 1
+                if prev_timestamp != 0:
+                    activities_features['still_dur'] += timestamp - prev_timestamp
+            elif activity_type == 'WALKING':
+                activities_features['walking_freq'] += 1
+                if prev_timestamp != 0:
+                    activities_features['walking_dur'] += timestamp - prev_timestamp
+            elif activity_type == 'RUNNING':
+                activities_features['running_freq'] += 1
+                if prev_timestamp != 0:
+                    activities_features['running_dur'] += timestamp - prev_timestamp
+            elif activity_type == 'ON_BICYCLE':
+                activities_features['on_bicycle_freq'] += 1
+                if prev_timestamp != 0:
+                    activities_features['on_bicycle_dur'] += timestamp - prev_timestamp
+            elif activity_type == 'IN_VEHICLE':
+                activities_features['in_vehicle_freq'] += 1
+                if prev_timestamp != 0:
+                    activities_features['in_vehicle_dur'] += timestamp - prev_timestamp
 
-        prev_timestamp = timestamp
+            prev_timestamp = timestamp
     return activities_features
 
 
@@ -873,6 +874,7 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
         'dur_at_work_study': 0,
         'entropy': np.nan,
         'normalized_entropy': np.nan,
+        'location_variance': np.nan,
         'max_dist_from_home': np.nan,
         'avg_dist_from_home': np.nan,
         'max_dist_btw_places': np.nan,
@@ -955,6 +957,22 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
         for i, v in enumerate(sample_cores):
             if v:
                 lat_lng_no_outliers.append(X[i])
+
+        # region location variance
+        lat_arr = []
+        lng_arr = []
+        for i in lat_lng_no_outliers:
+            lat_arr.append(i[0])
+            lng_arr.append(i[1])
+        lat_arr = np.array(lat_arr).astype('float64')
+        lng_arr = np.array(lng_arr).astype('float64')
+
+        lat_var = lat_arr.var()
+        lng_var = lng_arr.var()
+        try:
+            location_features['location_variance'] = math.log10(lat_var * lat_var + lng_var * lng_var)
+        except:
+            location_features['location_variance'] = np.nan
 
         all_distances_from_home = []
         for lat, lng in lat_lng_no_outliers:
@@ -1056,8 +1074,10 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     closest_lng = lat_lng_no_outliers[min_distance_index][1]
                     closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
                     univ_cluster = labels[closest_loc_index_X]
-
-                    location_features['dur_at_work_study'] = total_time_per_label[int(univ_cluster)]
+                    try:
+                        location_features['dur_at_work_study'] = total_time_per_label[int(univ_cluster)]
+                    except:
+                        location_features['dur_at_work_study'] = np.nan
         elif not pd.isna(manual_locations['work'][0]) & pd.isna(manual_locations['univ'][0]):  # if only work place
             all_distances_from_work = []
             for lat, lng in lat_lng_no_outliers:
@@ -1090,7 +1110,10 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     closest_lng = lat_lng_no_outliers[min_distance_index][1]
                     closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
                     univ_cluster = labels[closest_loc_index_X]
-                    univ_duration = total_time_per_label[int(univ_cluster)]
+                    try:
+                        univ_duration = total_time_per_label[int(univ_cluster)]
+                    except:
+                        univ_duration = np.nan
                 else:
                     univ_duration = 0
             else:
@@ -1109,7 +1132,10 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
                     closest_lng = lat_lng_no_outliers[min_distance_index][1]
                     closest_loc_index_X = np.where((X[:, 0] == closest_lat) & (X[:, 1] == closest_lng))
                     work_cluster = labels[closest_loc_index_X]
-                    work_duration = total_time_per_label[int(work_cluster)]
+                    try:
+                        work_duration = total_time_per_label[int(work_cluster)]
+                    except:
+                        work_duration = 0
                 else:
                     work_duration = 0
             else:

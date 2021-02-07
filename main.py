@@ -1,3 +1,4 @@
+import math
 import statistics
 import time
 from datetime import datetime
@@ -9,13 +10,14 @@ import features_extraction
 import tools
 
 USER_ID = 89
-data_directory = '51people'
+data_directory = 'extracted_features'
 data_sources = [1, 4, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 26, 27, 28, 29, 71]
 
-user_ids = [85, 86, 87, 89, 90, 91, 92, 93, 97, 98, 100, 102, 103, 104, 105, 107, 108, 109,
+user_ids = [85, 86, 87, 89, 90, 91, 92, 93, 97, 98, 100, 102, 103, 104, 105,
+            107, 108, 109,
             110, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 125, 126, 128, 129,
             131, 132, 133, 134, 135, 137, 141, 143, 146, 149, 150, 151, 152, 153, 154, 156,
-            158]
+            158, 159]
 
 user_ids_with_gender = {
     85: 1,
@@ -68,7 +70,8 @@ user_ids_with_gender = {
     153: 1,
     154: 0,
     156: 1,
-    158: 0
+    158: 0,
+    159: 1
 
 }
 user_ids_with_depression_group = {
@@ -122,7 +125,8 @@ user_ids_with_depression_group = {
     153: 3,
     154: 1,
     156: 1,
-    158: 3
+    158: 3,
+    159: 2
 
 }
 
@@ -286,10 +290,10 @@ def extract_features(user_directory):
         user_id = int(user_directory.split('-')[-1])
         filenames = tools.create_filenames(user_id, data_sources)
         output_table = pd.DataFrame(columns=output_columns)
-        output_filename = f'extracted_features_30mins/extracted_features_{user_id}.csv'
+        output_filename = f'extracted_features_{user_id}.csv'
         print(f'Feature extraction started for {user_directory}')
 
-        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/5people/{user_directory}/{user_id}_11.csv'
         tools.remove_duplicate_ema(ema_filename)
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
@@ -383,7 +387,7 @@ def extract_features(user_directory):
 
         for row in ema_table.itertuples():
             print('*************' + row.timestamp + '*************')
-            ema_time_range = tools.get_ema_time_range_30min(int(row.timestamp))
+            ema_time_range = tools.get_ema_time_range_4hrs(int(row.timestamp))
 
             # region extracting features related to EMA
 
@@ -588,12 +592,13 @@ def extract_features(user_directory):
 
 def add_sleep_duration(user_directory):
     if user_directory != '.DS_Store':
+        user_directory = f"4-{user_directory.split('_')[-1].split('.')[0]}"
         user_id = int(user_directory.split('-')[-1])
         print('Sleep extraction started for user', user_id)
 
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
-        app_usage_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_28.csv'
-        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        app_usage_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_28.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_11.csv'
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
@@ -636,13 +641,14 @@ def add_sleep_duration(user_directory):
 
 
 def add_weather_data(user_directory):
-    if user_directory != '.DS_Store':
+    if user_directory != '.DS_Store' and user_directory != 'done':
+        user_directory = f"4-{user_directory.split('_')[-1].split('.')[0]}"
         print(f'Weather features extraction started for {user_directory}')
         weather_df = pd.read_csv('/Users/aliceberg/Programming/PyCharm/STDD-FE/incheon.csv', index_col='date_time')
         user_id = int(user_directory.split('-')[-1])
 
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
-        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/data_for_fe/{user_directory}/{user_id}_11.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_11.csv'
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
@@ -711,7 +717,7 @@ def missing_data_imputation_ffill(user_directory):
         user_id = int(user_directory.split('-')[-1])
         output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
         output_dataframe = pd.read_csv(output_filename)
-        columns = ['pitch_min', 'images_num', 'videos_num', 'music_num', 'cal_events_num', 'sound_energy_min',
+        columns = ['images_num', 'videos_num', 'music_num', 'cal_events_num', 'sound_energy_min',
                    'sound_energy_max', 'sound_energy_avg', 'sound_energy_stdev']
         for col in columns:
             output_dataframe[col] = output_dataframe[col].ffill()
@@ -721,7 +727,7 @@ def missing_data_imputation_ffill(user_directory):
     return f'Finished missing data imputation for {user_directory}'
 
 
-def social_activity_score_calculation(filename):
+def social_activity_score_calculation_old(filename):
     weight = 10  # todo: the value of weight is to be decided
     dataframe = pd.read_csv(filename, low_memory=False, encoding='utf-8')
     social_activity_values = []
@@ -767,6 +773,73 @@ def social_activity_score_calculation(filename):
 
     dataframe['social_score'] = social_activity_scores
     dataframe.to_csv(filename, index=False)
+
+
+def social_act_score_calculation(filename):
+    i = 3
+    df_main = pd.read_csv(filename)
+    columns = ['app_social_communication_dur',
+               'app_social_communication_freq',
+               'calls_in_num',
+               'calls_out_num',
+               'calls_min_out_dur',
+               'calls_max_out_dur',
+               'calls_avg_out_dur',
+               'calls_total_out_dur',
+               'calls_min_in_dur',
+               'calls_max_in_dur',
+               'calls_avg_in_dur',
+               'calls_total_in_dur',
+               'sms_min_chars',
+               'sms_max_chars',
+               'sms_avg_chars',
+               'sms_unique_contacts',
+               'sms_total_num']
+
+    # splitting by user_id
+    gb = df_main.groupby('user_id')
+    [gb.get_group(x) for x in gb.groups]
+
+    social_val = []
+    social_score = []
+    results_row = []
+    mean = {}
+    sd = {}
+
+    for col in columns:
+        mean[col] = df_main[col].mean()
+        sd[col] = df_main[col].std(skipna=True)
+
+    for user_id in gb.groups:
+        df = gb.get_group(user_id)
+
+        for index, row in df.iterrows():
+            for col in columns:
+                r = ((((row[col] - mean[col]) / sd[col]) + i) / (2 * i)) * 100
+                if not math.isnan(r):
+                    results_row.append(r)
+
+            result = sum(results_row) / len(results_row)
+            results_row = []
+            social_val.append(result)
+
+            if result < 20:
+                social_score.append(1)
+            elif 20 <= result < 40:
+                social_score.append(2)
+            elif 40 <= result < 60:
+                social_score.append(3)
+            elif 60 <= result < 80:
+                social_score.append(4)
+            elif 80 <= result <= 100:
+                social_score.append(5)
+            else:
+                social_score.append(0)
+
+    df_main['social_val'] = social_val
+    df_main['social_score'] = social_score
+
+    df_main.to_csv(filename, index=False)
 
 
 def sleep_score_calculation(filename):
@@ -896,7 +969,7 @@ def convert_ema_to_symptom_scores(filename):
 
 def remove_missing_values_rows(filename, threshold):
     df = pd.read_csv(filename, low_memory=False)
-    df = df[df.isnull().sum(axis=1) < threshold]
+    df = df[df.isnull().mean(axis=1) < threshold]
 
     df.to_csv(filename, index=False)
 
@@ -905,12 +978,12 @@ def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
     # with concurrent.futures.ProcessPoolExecutor() as executor:
-    #     results = [executor.submit(extract_features, filename) for filename in os.listdir(data_directory)]
+    #     results = [executor.submit(add_sleep_duration, filename) for filename in os.listdir(data_directory)]
     #
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
 
-    tools.combine_files('extracted_features_30mins', output_columns)
+    social_act_score_calculation('extracted_features.csv')
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')
