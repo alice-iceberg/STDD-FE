@@ -462,17 +462,22 @@ def get_unlock_state_features(table, start_time, end_time):
     unlock_state_features = {
         "lock_freq": 0,
         "unlock_freq": 0,
+        "unlock_dur": 0
     }
     table['timestamp'] = pd.to_numeric(table['timestamp'])
     df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
+    prev_unlock_time = 0
     for row in df_filtered.itertuples(index=False):
 
         unlock_state_flag = row.value.split(" ")[-1]
         if unlock_state_flag == "LOCK":
             unlock_state_features["lock_freq"] += 1
+            if prev_unlock_time != 0:
+                unlock_state_features['unlock_dur'] += row.timestamp - prev_unlock_time
         else:
             unlock_state_features["unlock_freq"] += 1
+            prev_unlock_time = row.timestamp
 
     return unlock_state_features
 
