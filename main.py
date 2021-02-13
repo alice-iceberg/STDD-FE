@@ -244,6 +244,11 @@ output_columns = [
     'typing_max',
     'typing_avg',
     'typing_stdev',
+    'bkspace_ratio',
+    'autocor_ratio',
+    'intrkey_delay_avg',
+    'intrkey_delay_stdev',
+    'key_sessions_num',
     'gr_x_mean',
     'gr_x_std',
     'gr_y_mean',
@@ -366,7 +371,11 @@ def extract_features(user_directory):
         typing_dataframe.columns = ["timestamp", "value"]
         typing_dataframe = typing_dataframe.drop_duplicates()
         typing_dataframe = typing_dataframe.sort_values(by='timestamp')
-
+        keystroke_log_dataframe = pd.read_csv(filenames[data_sources_with_ids['KEYSTROKE_LOG']], low_memory=False,
+                                              header=None)
+        keystroke_log_dataframe.columns = ["timestamp", "value"]
+        keystroke_log_dataframe = keystroke_log_dataframe.drop_duplicates()
+        keystroke_log_dataframe = keystroke_log_dataframe.sort_values(by='timestamp')
         gravity_dataframe = pd.read_csv(filenames[data_sources_with_ids['GRAVITY']], low_memory=False, header=None)
         gravity_dataframe.columns = ["timestamp", "value"]
         gravity_dataframe = gravity_dataframe.drop_duplicates()
@@ -446,6 +455,10 @@ def extract_features(user_directory):
                 typing_features = features_extraction.get_typing_features(typing_dataframe,
                                                                           value,
                                                                           ema_time_range['time_to'][i])
+                print("Extracting keystroke log features")
+                keystroke_log_features = features_extraction.get_keystroke_features(keystroke_log_dataframe,
+                                                                                    value,
+                                                                                    ema_time_range['time_to'][i])
                 print("Extracting gravity features")
                 gravity_features = features_extraction.get_gravity_features(gravity_dataframe,
                                                                             value,
@@ -570,6 +583,11 @@ def extract_features(user_directory):
                     'typing_max': typing_features['typing_max'],
                     'typing_avg': typing_features['typing_avg'],
                     'typing_stdev': typing_features['typing_stdev'],
+                    'bkspace_ratio': keystroke_log_features['bkspace_ratio'],
+                    'autocor_ratio': keystroke_log_features['autocor_ratio'],
+                    'intrkey_delay_avg': keystroke_log_features['intrkey_delay_avg'],
+                    'intrkey_delay_stdev': keystroke_log_features['intrkey_delay_stdev'],
+                    'key_sessions_num': keystroke_log_features['key_sessions_num'],
                     'gr_x_mean': gravity_features['gr_x_mean'],
                     'gr_x_std': gravity_features['gr_x_std'],
                     'gr_y_mean': gravity_features['gr_y_mean'],

@@ -1244,6 +1244,67 @@ def get_gravity_features(table, start_time, end_time):
     return gravity_features
 
 
+def get_keystroke_features(table, start_time, end_time):
+    keystroke_features = {
+        'bkspace_ratio': 0,
+        'autocor_ratio': 0,
+        'intrkey_delay_avg': np.nan,
+        'intrkey_delay_stdev' : np.nan,
+        'key_sessions_num': 0
+    }
+
+    other_keys = 0
+    backspace = 0
+    autocorrect = 0
+
+    interkey_delays = []
+
+    session_threshold = 5000  # 5 seconds
+
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    table_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+
+    if table_filtered.empty:
+        return keystroke_features
+
+    for row in table_filtered.itertuples(index=False):
+        flag = row.value.split(" ")[-1]
+        if flag == 'OTHER':
+            other_keys += 1
+        elif flag == 'AUTOCORRECT':
+            if row.value.split(" ")[1] == 'YES':
+                autocorrect += 1
+        elif flag == 'BACKSPACE':
+            backspace += 1
+
+    if other_keys == 0:
+        return keystroke_features
+
+    keystroke_features['bkspace_ratio'] = backspace / other_keys
+    keystroke_features['autocor_ratio'] = autocorrect / other_keys
+
+    table_filtered = table_filtered['value'].str.split(' ', n=3, expand=True)
+    table_filtered.columns = ['timestamp', 'autocor_flag', 'package_name', 'flag']
+    table_filtered_others = table_filtered.query('flag == "OTHER"')
+    table_filtered_others['timestamp'] = pd.to_numeric(table_filtered_others['timestamp'])
+
+    prev_timestamp = 0
+    for row in table_filtered_others.itertuples(index=False):
+        if prev_timestamp != 0:
+            delay = row.timestamp - prev_timestamp
+            if delay < session_threshold:
+                interkey_delays.append(delay)
+            else:
+                keystroke_features['key_sessions_num'] += 1
+
+        prev_timestamp = row.timestamp
+
+    if len(interkey_delays) > 0:
+        keystroke_features['intrkey_delay_avg'] = statistics.mean(interkey_delays)
+    if len(interkey_delays) > 1:
+        keystroke_features['intrkey_delay_stdev'] = statistics.stdev(interkey_delays)
+
+    return keystroke_features
 
 
 def get_sleep_duration(table):
