@@ -1,13 +1,14 @@
+import concurrent.futures
 import math
+import os
 import statistics
 import time
 from datetime import datetime
-import concurrent.futures
+
 import numpy as np
 import pandas as pd
-import os
+
 import features_extraction
-import ml
 import tools
 
 USER_ID = 89
@@ -235,10 +236,7 @@ output_columns = [
     'sound_energy_min',
     'sound_energy_max',
     'sound_energy_avg',
-    'sound_energy_stdev',
-    'images_dif',
-    'videos_dif',
-    'music_dif',
+    'sound_energy_stdev'
     'wifi_unique_num',
     'typing_freq',
     'typing_unique_apps_num',
@@ -246,7 +244,12 @@ output_columns = [
     'typing_max',
     'typing_avg',
     'typing_stdev',
-    'cal_events_dif',
+    'gr_x_mean',
+    'gr_x_std',
+    'gr_y_mean',
+    'gr_y_std',
+    'gr_z_mean',
+    'gr_z_std',
     'gender',
     'weekday',  # 1 if weekday, 0 otherwise
     'depr_group',
@@ -268,6 +271,7 @@ data_sources_with_ids = {
     'APPLICATION_USAGE': 28,
     'CALENDAR': 26,
     'CALLS': 29,
+    'GRAVITY': 5,
     'INSTAGRAM_FEATURES': 24,
     'KEYSTROKE_LOG': 23,
     'LOCATIONS_MANUAL': 22,
@@ -362,6 +366,12 @@ def extract_features(user_directory):
         typing_dataframe.columns = ["timestamp", "value"]
         typing_dataframe = typing_dataframe.drop_duplicates()
         typing_dataframe = typing_dataframe.sort_values(by='timestamp')
+
+        gravity_dataframe = pd.read_csv(filenames[data_sources_with_ids['GRAVITY']], low_memory=False, header=None)
+        gravity_dataframe.columns = ["timestamp", "value"]
+        gravity_dataframe = gravity_dataframe.drop_duplicates()
+        gravity_dataframe = gravity_dataframe.sort_values(by='timestamp')
+
         locations_gps_dataframe = pd.read_csv(filenames[data_sources_with_ids['LOCATION_GPS']], low_memory=False,
                                               header=None)
         locations_gps_dataframe.columns = ["timestamp", "value"]
@@ -436,6 +446,10 @@ def extract_features(user_directory):
                 typing_features = features_extraction.get_typing_features(typing_dataframe,
                                                                           value,
                                                                           ema_time_range['time_to'][i])
+                print("Extracting gravity features")
+                gravity_features = features_extraction.get_gravity_features(gravity_dataframe,
+                                                                            value,
+                                                                            ema_time_range['time_to'][i])
                 print("Extracting locations features")
                 locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
                                                                                 locations_manual_dataframe,
@@ -556,6 +570,12 @@ def extract_features(user_directory):
                     'typing_max': typing_features['typing_max'],
                     'typing_avg': typing_features['typing_avg'],
                     'typing_stdev': typing_features['typing_stdev'],
+                    'gr_x_mean': gravity_features['gr_x_mean'],
+                    'gr_x_std': gravity_features['gr_x_std'],
+                    'gr_y_mean': gravity_features['gr_y_mean'],
+                    'gr_y_std': gravity_features['gr_y_std'],
+                    'gr_z_mean': gravity_features['gr_z_mean'],
+                    'gr_z_std': gravity_features['gr_z_std'],
                     'gender': user_ids_with_gender[user_id],
                     'weekday': tools.is_weekday(row.timestamp),
                     'depr_group': user_ids_with_depression_group[user_id]
@@ -629,7 +649,7 @@ def extract_features_double_period(user_directory):
                                                                                       'prev_time_to'][i],
                                                                                   value,
                                                                                   ema_time_range['time_to'][i])
-            # endregion
+                # endregion
 
                 # appending dataframe
                 extracted_features = {

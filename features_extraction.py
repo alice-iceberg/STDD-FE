@@ -1201,6 +1201,51 @@ def get_locations_features(table_gps, table_manual_locations, start_time, end_ti
     return location_features
 
 
+def get_gravity_features(table, start_time, end_time):
+    gravity_features = {
+        'gr_x_mean': np.nan,
+        'gr_x_std': np.nan,
+        'gr_y_mean': np.nan,
+        'gr_y_std': np.nan,
+        'gr_z_mean': np.nan,
+        'gr_z_std': np.nan
+    }
+    gravities_x = []
+    gravities_y = []
+    gravities_z = []
+
+    table['timestamp'] = pd.to_numeric(table['timestamp'])
+    table_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+
+    if table_filtered.empty:
+        gravity_features['gr_x_mean'] = 0
+        gravity_features['gr_x_std'] = 0
+        gravity_features['gr_y_mean'] = 0
+        gravity_features['gr_y_std'] = 0
+        gravity_features['gr_z_mean'] = 0
+        gravity_features['gr_z_std'] = 0
+
+        return gravity_features
+
+    for row in table_filtered.itertuples(index=False):
+        gravities_x.append(row.value.split(" ")[1])
+        gravities_y.append(row.value.split(" ")[2])
+        gravities_z.append(row.value.split(" ")[3])
+
+    gravity_features['gr_x_mean'] = statistics.mean(gravities_x)
+    gravity_features['gr_y_mean'] = statistics.mean(gravities_y)
+    gravity_features['gr_z_mean'] = statistics.mean(gravities_z)
+
+    if len(table_filtered) > 1:
+        gravity_features['gr_x_std'] = statistics.stdev(gravities_x)
+        gravity_features['gr_y_std'] = statistics.stdev(gravities_y)
+        gravity_features['gr_z_std'] = statistics.stdev(gravities_z)
+
+    return gravity_features
+
+
+
+
 def get_sleep_duration(table):
     """
 
