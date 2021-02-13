@@ -119,11 +119,30 @@ def get_app_usage_features(table, start_time, end_time):
         'app_unknown_background_freq': 0,
 
         'apps_total_num': 0,
-        'apps_unique_num': 0
+        'apps_unique_num': 0,
+        'browser_dur': 0
     }
 
     apps = []
 
+    browser_package_names = [
+        'com.android.chrome',
+        'com.chrome.beta',
+        'com.chrome.canary',
+        'com.google.android.googlequicksearchbox',
+        'com.vivaldi.browser',
+        'com.naver.whale',
+        'ai.blokee.browser.android',
+        'net.onecook.browser',
+        'com.nhn.android.search',
+        'com.sec.android.app.sbrowser',
+        'com.microsoft.emmx',
+        'com.brave.browser',
+        'org.mozilla.firefox',
+        'com.opera.browser',
+        'savannah.internet.web.browser',
+        'com.cloudmosa.puffinFree'
+    ]
     table['timestamp'] = pd.to_numeric(table['timestamp'])
     df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
@@ -136,7 +155,8 @@ def get_app_usage_features(table, start_time, end_time):
             app_usage_features['apps_total_num'] += 1
             if pckg_name not in apps:
                 apps.append(pckg_name)
-
+            if pckg_name in browser_package_names or pckg_name.__contains__('browser'):
+                app_usage_features['browser_dur'] += duration
             if pckg_name in tools.pckg_to_cat_map:
                 category = tools.pckg_to_cat_map[pckg_name]
             else:
@@ -1249,7 +1269,7 @@ def get_keystroke_features(table, start_time, end_time):
         'bkspace_ratio': 0,
         'autocor_ratio': 0,
         'intrkey_delay_avg': np.nan,
-        'intrkey_delay_stdev' : np.nan,
+        'intrkey_delay_stdev': np.nan,
         'key_sessions_num': 0
     }
 
