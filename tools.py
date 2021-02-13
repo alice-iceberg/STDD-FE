@@ -16,7 +16,7 @@ cat_list = pd.read_csv('Cat_group.csv')
 def create_filenames(user_id, data_source_ids):
     filenames = {}
     for item, value in enumerate(data_source_ids):
-        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/5people/4-{user_id}/{user_id}_{value}.csv'
+        _filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/4-{user_id}/{user_id}_{value}.csv'
         filenames[value] = _filename
 
     return filenames
@@ -35,6 +35,7 @@ def split_symptom_clusters_file_per_group(filename):
     df1.to_csv('symptom_clusters1.csv', index=False)
     df2.to_csv('symptom_clusters2.csv', index=False)
     df3.to_csv('symptom_clusters3.csv', index=False)
+
 
 def add_header_to_df(filename, output_columns):
     df = pd.read_csv(filename)
@@ -368,18 +369,28 @@ def get_ema_time_range_4hrs(ema_timestamp):
         "time_from": [],
         "time_to": []
     }
+    ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
+    ema_time_range["time_to"].append(ema_timestamp)
+    return ema_time_range
 
+
+def get_ema_double_time_range_4hrs(ema_timestamp):
+    ema_time_range = {
+        "prev_time_from": [],
+        "prev_time_to": [],
+        "time_from": [],
+        "time_to": []
+    }
     ema_order = from_timestamp_to_ema_order(ema_timestamp)
+
     if ema_order == 1:
-        ema_time_range["time_from"].append(ema_timestamp - 3 * 14400000)  # 12 hours before EMA
-        ema_time_range["time_to"].append(ema_timestamp - 28800000)  # 8 hours before EMA
-
-        ema_time_range["time_from"].append(ema_timestamp - 28800000)  # 8 hours before EMA
-        ema_time_range["time_to"].append(ema_timestamp - 14400000)  # 4 hours before EMA
-
+        ema_time_range["prev_time_from"].append(ema_timestamp - 4 * 14400000)  # 16 hours before EMA
+        ema_time_range["prev_time_to"].append(ema_timestamp - 3 * 14400000)  # 12 hours before EMA
         ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
         ema_time_range["time_to"].append(ema_timestamp)
     else:
+        ema_time_range["prev_time_from"].append(ema_timestamp - 2 * 14400000)  # 8 hours before EMA
+        ema_time_range["prev_time_to"].append(ema_timestamp - 14400000)  # 4 hours before EMA
         ema_time_range["time_from"].append(ema_timestamp - 14400000)  # 4 hours before EMA
         ema_time_range["time_to"].append(ema_timestamp)
 
@@ -637,4 +648,3 @@ def remove_mfcc_data(filename, new_filename):
             for line in file:
                 if line[-2] != '"':
                     write_to.write(line)
-

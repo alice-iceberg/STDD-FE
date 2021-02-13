@@ -2,18 +2,16 @@ import math
 import statistics
 import time
 from datetime import datetime
-
+import concurrent.futures
 import numpy as np
 import pandas as pd
-import ml
-
-import tools
-
+import os
 import features_extraction
+import ml
 import tools
 
 USER_ID = 89
-data_directory = 'extracted_features'
+data_directory = '51people'
 data_sources = [1, 4, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 26, 27, 28, 29, 71]
 
 user_ids = [85, 86, 87, 89, 90, 91, 92, 93, 97, 98, 100, 102, 103, 104, 105,
@@ -238,9 +236,9 @@ output_columns = [
     'sound_energy_max',
     'sound_energy_avg',
     'sound_energy_stdev',
-    'images_num',
-    'videos_num',
-    'music_num',
+    'images_dif',
+    'videos_dif',
+    'music_dif',
     'wifi_unique_num',
     'typing_freq',
     'typing_unique_apps_num',
@@ -248,7 +246,7 @@ output_columns = [
     'typing_max',
     'typing_avg',
     'typing_stdev',
-    'cal_events_num',
+    'cal_events_dif',
     'gender',
     'weekday',  # 1 if weekday, 0 otherwise
     'depr_group',
@@ -303,8 +301,6 @@ def extract_features(user_directory):
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
         ema_table.columns = ['timestamp', 'ema_order', 'phq1', 'phq2', 'phq3', 'phq4', 'phq5', 'phq6', 'phq7', 'phq8',
                              'phq9']
-        ema_table = ema_table.drop_duplicates()
-        ema_table = ema_table.sort_values(by='timestamp')
         # region creating dataframes
         activities_dataframe = pd.read_csv(filenames[data_sources_with_ids['ACTIVITY_RECOGNITION']], low_memory=False,
                                            header=None)
@@ -358,11 +354,6 @@ def extract_features(user_directory):
         microphone_dataframe.columns = ["timestamp", "value"]
         microphone_dataframe = microphone_dataframe.drop_duplicates()
         microphone_dataframe = microphone_dataframe.sort_values(by='timestamp')
-        stored_media_dataframe = pd.read_csv(filenames[data_sources_with_ids['STORED_MEDIA']], low_memory=False,
-                                             header=None)
-        stored_media_dataframe.columns = ["timestamp", "value"]
-        stored_media_dataframe = stored_media_dataframe.drop_duplicates()
-        stored_media_dataframe = stored_media_dataframe.sort_values(by='timestamp')
         wifi_dataframe = pd.read_csv(filenames[data_sources_with_ids['ANDROID_WIFI']], low_memory=False, header=None)
         wifi_dataframe.columns = ["timestamp", "value"]
         wifi_dataframe = wifi_dataframe.drop_duplicates()
@@ -381,10 +372,6 @@ def extract_features(user_directory):
         locations_manual_dataframe.columns = ["timestamp", "value"]
         locations_manual_dataframe = locations_manual_dataframe.drop_duplicates()
         locations_manual_dataframe = locations_manual_dataframe.sort_values(by='timestamp')
-        calendar_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALENDAR']], low_memory=False, header=None)
-        calendar_dataframe.columns = ["timestamp", "value"]
-        calendar_dataframe = calendar_dataframe.drop_duplicates()
-        calendar_dataframe = calendar_dataframe.sort_values(by='timestamp')
 
         # endregion
 
@@ -441,10 +428,6 @@ def extract_features(user_directory):
                 microphone_features = features_extraction.get_microphone_features(microphone_dataframe,
                                                                                   value,
                                                                                   ema_time_range['time_to'][i])
-                print("Extracting stored media features")
-                stored_media_features = features_extraction.get_stored_media_features(stored_media_dataframe,
-                                                                                      value,
-                                                                                      ema_time_range['time_to'][i])
                 print("Extracting wifi features")
                 wifi_features = features_extraction.get_wifi_features(wifi_dataframe,
                                                                       value,
@@ -453,10 +436,6 @@ def extract_features(user_directory):
                 typing_features = features_extraction.get_typing_features(typing_dataframe,
                                                                           value,
                                                                           ema_time_range['time_to'][i])
-                print("Extracting calendar features")
-                calendar_features = features_extraction.get_calendar_features(calendar_dataframe,
-                                                                              value,
-                                                                              ema_time_range['time_to'][i])
                 print("Extracting locations features")
                 locations_features = features_extraction.get_locations_features(locations_gps_dataframe,
                                                                                 locations_manual_dataframe,
@@ -464,7 +443,6 @@ def extract_features(user_directory):
                                                                                 ema_time_range['time_to'][i])
 
                 # endregion
-
                 # region appending dataframe with extracted features
                 extracted_features = {
                     'user_id': user_id,
@@ -571,9 +549,6 @@ def extract_features(user_directory):
                     'sound_energy_max': microphone_features['sound_energy_max'],
                     'sound_energy_avg': microphone_features['sound_energy_avg'],
                     'sound_energy_stdev': microphone_features['sound_energy_stdev'],
-                    'images_num': stored_media_features['images_num'],
-                    'videos_num': stored_media_features['videos_num'],
-                    'music_num': stored_media_features['music_num'],
                     'wifi_unique_num': wifi_features,
                     'typing_freq': typing_features['typing_freq'],
                     'typing_unique_apps_num': typing_features['typing_unique_apps_num'],
@@ -581,7 +556,6 @@ def extract_features(user_directory):
                     'typing_max': typing_features['typing_max'],
                     'typing_avg': typing_features['typing_avg'],
                     'typing_stdev': typing_features['typing_stdev'],
-                    'cal_events_num': calendar_features,
                     'gender': user_ids_with_gender[user_id],
                     'weekday': tools.is_weekday(row.timestamp),
                     'depr_group': user_ids_with_depression_group[user_id]
@@ -589,6 +563,86 @@ def extract_features(user_directory):
                 # endregion
 
                 output_table = output_table.append(extracted_features, ignore_index=True)
+        output_table.to_csv(output_filename, index=False)
+    return f'Feature extraction finished for {user_directory}'
+
+
+def extract_features_double_period(user_directory):
+    output_columns_double_period = [
+        'user_id',
+        'ema_timestamp',
+        'images_dif',
+        'videos_dif',
+        'music_dif',
+        'cal_events_dif'
+    ]
+
+    if user_directory != '.DS_Store':
+        user_id = int(user_directory.split('-')[-1])
+        filenames = tools.create_filenames(user_id, data_sources)
+        output_table = pd.DataFrame(columns=output_columns_double_period)
+        output_filename = f'new_extracted/extracted_features_{user_id}.csv'
+        print(f'Feature extraction started for {user_directory}')
+
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_11.csv'
+        tools.remove_duplicate_ema(ema_filename)
+
+        ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
+        ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
+        ema_table.columns = ['timestamp', 'ema_order', 'phq1', 'phq2', 'phq3', 'phq4', 'phq5', 'phq6', 'phq7', 'phq8',
+                             'phq9']
+
+        # region creating dataframes
+        calendar_dataframe = pd.read_csv(filenames[data_sources_with_ids['CALENDAR']], low_memory=False, header=None)
+        calendar_dataframe.columns = ["timestamp", "value"]
+        calendar_dataframe = calendar_dataframe.drop_duplicates()
+        calendar_dataframe = calendar_dataframe.sort_values(by='timestamp')
+
+        stored_media_dataframe = pd.read_csv(filenames[data_sources_with_ids['STORED_MEDIA']], low_memory=False,
+                                             header=None)
+        stored_media_dataframe.columns = ["timestamp", "value"]
+        stored_media_dataframe = stored_media_dataframe.drop_duplicates()
+        stored_media_dataframe = stored_media_dataframe.sort_values(by='timestamp')
+
+        # endregion
+
+        for row in ema_table.itertuples():
+            print('*************' + row.timestamp + '*************')
+            ema_time_range = tools.get_ema_double_time_range_4hrs(int(row.timestamp))
+
+            # region features extraction
+            for i, value in enumerate(ema_time_range['time_from']):
+                print("Extracting stored media features")
+                stored_media_features = features_extraction.get_new_stored_media_features(stored_media_dataframe,
+                                                                                          ema_time_range[
+                                                                                              'prev_time_from'][i],
+                                                                                          ema_time_range[
+                                                                                              'prev_time_to'][i],
+                                                                                          value,
+                                                                                          ema_time_range['time_to'][i])
+
+                print("Extracting calendar features")
+                calendar_features = features_extraction.get_new_calendar_features(calendar_dataframe,
+                                                                                  ema_time_range[
+                                                                                      'prev_time_from'][i],
+                                                                                  ema_time_range[
+                                                                                      'prev_time_to'][i],
+                                                                                  value,
+                                                                                  ema_time_range['time_to'][i])
+            # endregion
+
+                # appending dataframe
+                extracted_features = {
+                    'user_id': user_id,
+                    'ema_timestamp': row.timestamp,
+                    'images_dif': stored_media_features['images_dif'],
+                    'videos_dif': stored_media_features['videos_dif'],
+                    'music_dif': stored_media_features['music_dif'],
+                    'cal_events_dif': calendar_features
+                }
+
+                output_table = output_table.append(extracted_features, ignore_index=True)
+
         output_table.to_csv(output_filename, index=False)
     return f'Feature extraction finished for {user_directory}'
 
@@ -990,12 +1044,11 @@ def remove_missing_values_rows(filename, threshold):
 def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
-    # with concurrent.futures.ProcessPoolExecutor() as executor:
-    #     results = [executor.submit(add_sleep_duration, filename) for filename in os.listdir(data_directory)]
-    #
-    # for f in concurrent.futures.as_completed(results):
-    #     print(f.result())
-    ml.train_test_general_model_user_split('symptom_clusters.csv')
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = [executor.submit(extract_features_new, filename) for filename in os.listdir(data_directory)]
+
+    for f in concurrent.futures.as_completed(results):
+        print(f.result())
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')

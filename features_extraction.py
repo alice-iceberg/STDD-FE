@@ -508,30 +508,49 @@ def get_microphone_features(table, start_time, end_time):
     return microphone_features
 
 
-def get_stored_media_features(table, start_time, end_time):
-    """
-
-        :param table: input dataframe
-        :param start_time: start time of needed range
-        :param end_time: end time of needed range
-        :return: dict of stored media features: images_num, videos_num, music_num
-        """
-
+def get_stored_media_features(table, prev_start_time, prev_end_time, start_time, end_time):
     stored_media_features = {
-        "images_num": np.NaN,
-        "videos_num": np.NaN,
-        "music_num": np.NaN
+        "images_dif": 0,
+        "videos_dif": 0,
+        "music_dif": 0
     }
+
     table['timestamp'] = pd.to_numeric(table['timestamp'])
-    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
-    for row in df_filtered.itertuples(index=False):
+    table_prev = table.query(f'timestamp>{prev_start_time} & timestamp<{prev_end_time}')
+    table_cur = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
+
+    if table_prev.empty or table_cur.empty:
+        return stored_media_features
+
+    for row in table_prev.itertuples(index=False):
         media_flag = row.value.split(" ")[-1]
         if media_flag == "IMAGE":
-            stored_media_features["images_num"] = row.value.split(" ")[1]
+            prev_image_num = int(row.value.split(" ")[1])
         elif media_flag == "VIDEO":
-            stored_media_features["videos_num"] = row.value.split(" ")[1]
+            prev_vid_num = int(row.value.split(" ")[1])
         else:
-            stored_media_features["music_num"] = row.value.split(" ")[1]
+            prev_music_num = int(row.value.split(" ")[1])
+
+    for row in table_cur.itertuples(index=False):
+        media_flag = row.value.split(" ")[-1]
+        if media_flag == "IMAGE":
+            cur_image_num = int(row.value.split(" ")[1])
+        elif media_flag == "VIDEO":
+            cur_vid_num = int(row.value.split(" ")[1])
+        else:
+            cur_music_num = int(row.value.split(" ")[1])
+    try:
+        stored_media_features["music_dif"] = cur_music_num - prev_music_num
+    except:
+        stored_media_features["music_dif"] = 0
+    try:
+        stored_media_features["videos_dif"] = cur_vid_num - prev_vid_num
+    except:
+        stored_media_features["videos_dif"] = 0
+    try:
+        stored_media_features["images_dif"] = cur_image_num - prev_image_num
+    except:
+        stored_media_features["images_dif"] = 0
 
     return stored_media_features
 
@@ -602,15 +621,18 @@ def get_typing_features(table, start_time, end_time):
     return typing_features
 
 
-def get_calendar_features(table, start_time, end_time):
-    # todo: recheck how many calendar records are for each EMA
-    num_events = np.NaN
+def get_calendar_features(table, prev_start_time, prev_end_time, start_time, end_time):
     table['timestamp'] = pd.to_numeric(table['timestamp'])
-    df_filtered = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
-    for row in df_filtered.itertuples(index=False):
-        num_events = row.value.split(" ")[1]
+    table_prev = table.query(f'timestamp>{prev_start_time} & timestamp<{prev_end_time}')
+    table_cur = table.query(f'timestamp>{start_time} & timestamp<{end_time}')
 
-    return num_events
+    if table_prev.empty or table_cur.empty:
+        return 0
+
+    prev_events_num = int(table_prev['value'].iloc[-1].split(" ")[1])
+    cur_events_num = int(table_cur['value'].iloc[-1].split(" ")[1])
+
+    return cur_events_num - prev_events_num
 
 
 def get_locations_features_old(table, manual_locations_table, start_time, end_time):
@@ -675,9 +697,9 @@ def get_locations_features_old(table, manual_locations_table, start_time, end_ti
         lat_var = lat_arr.var()
         lng_var = lng_arr.var()
 
-        location_features["location_variance"] = math.log10(lat_var*lat_var + lng_var*lng_var)
+        location_features["location_variance"] = math.log10(lat_var * lat_var + lng_var * lng_var)
 
-    # endregion
+        # endregion
 
         while True:
             temp = num_clusters
