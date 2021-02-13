@@ -5,6 +5,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import ml
+
+import tools
 
 import features_extraction
 import tools
@@ -908,45 +911,55 @@ def convert_ema_to_symptom_scores(filename):
             mood_score = 1
         elif mood_score == 4:
             mood_score = 2
+        elif mood_score == 3:
+            mood_score = 3
         elif mood_score == 2:
             mood_score = 4
-        else:
+        elif mood_score == 1:
             mood_score = 5
 
         if food_score == 5:
             food_score = 1
         elif food_score == 4:
             food_score = 2
+        elif food_score == 3:
+            food_score = 3
         elif food_score == 2:
             food_score = 4
-        else:
+        elif food_score == 1:
             food_score = 5
 
         if sleep_score == 5:
             sleep_score = 1
         elif sleep_score == 4:
             sleep_score = 2
+        elif sleep_score == 3:
+            sleep_score = 3
         elif sleep_score == 2:
             sleep_score = 4
-        else:
+        elif sleep_score == 1:
             sleep_score = 5
 
         if social_activity_score == 5:
             social_activity_score = 1
         elif social_activity_score == 4:
             social_activity_score = 2
+        elif social_activity_score == 3:
+            social_activity_score = 3
         elif social_activity_score == 2:
             social_activity_score = 4
-        else:
+        elif social_activity_score == 1:
             social_activity_score = 5
 
         if physical_activity_score == 5:
             physical_activity_score = 1
         elif physical_activity_score == 4:
             physical_activity_score = 2
+        elif physical_activity_score == 3:
+            physical_activity_score = 3
         elif physical_activity_score == 2:
             physical_activity_score = 4
-        else:
+        elif physical_activity_score == 1:
             physical_activity_score = 5
 
         # endregion
@@ -982,8 +995,7 @@ def main():
     #
     # for f in concurrent.futures.as_completed(results):
     #     print(f.result())
-
-    social_act_score_calculation('extracted_features.csv')
+    ml.train_test_general_model_user_split('symptom_clusters.csv')
 
     finish = time.perf_counter()
     print(f'Finished in {round(finish - start)} second(s)')

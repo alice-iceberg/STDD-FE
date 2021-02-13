@@ -22,6 +22,20 @@ def create_filenames(user_id, data_source_ids):
     return filenames
 
 
+def split_symptom_clusters_file_per_group(filename):
+    df = pd.read_csv(filename)
+    gb = df.groupby('depr_group')
+    df_list = [gb.get_group(x) for x in gb.groups]
+    df1 = df_list[0]
+    df1 = df1.sort_values(by=['user_id', 'ema_timestamp'])
+    df2 = df_list[1]
+    df2 = df2.sort_values(by=['user_id', 'ema_timestamp'])
+    df3 = df_list[2]
+    df3 = df3.sort_values(by=['user_id', 'ema_timestamp'])
+    df1.to_csv('symptom_clusters1.csv', index=False)
+    df2.to_csv('symptom_clusters2.csv', index=False)
+    df3.to_csv('symptom_clusters3.csv', index=False)
+
 def add_header_to_df(filename, output_columns):
     df = pd.read_csv(filename)
     df.columns = output_columns
@@ -504,9 +518,12 @@ def create_physical_act_features_file(input_filename):
     df_out['ema_timestamp'] = df.ema_timestamp
     df_out['still_freq'] = df.still_freq
     df_out['walking_freq'] = df.walking_freq
-    df_out['running_freq'] = df.running_freq
-    df_out['on_bicycle_freq'] = df.on_bicycle_freq
+    df_out['other_act_freq'] = df.other_act_freq
     df_out['in_vehicle_freq'] = df.in_vehicle_freq
+    df_out['still_dur'] = df.still_dur
+    df_out['walking_dur'] = df.walking_dur
+    df_out['other_act_dur'] = df.other_act_dur
+    df_out['in_vehicle_dur'] = df.in_vehicle_dur
     df_out['signif_motion_freq'] = df.signif_motion_freq
     df_out['steps_num'] = df.steps_num
     df_out['weekday'] = df.weekday
@@ -523,37 +540,36 @@ def create_mood_features_file(input_filename):
     df_out['ema_timestamp'] = df.ema_timestamp
     df_out['still_freq'] = df.still_freq
     df_out['walking_freq'] = df.walking_freq
-    df_out['running_freq'] = df.running_freq
-    df_out['on_bicycle_freq'] = df.on_bicycle_freq
     df_out['in_vehicle_freq'] = df.in_vehicle_freq
+    df_out['other_act_freq'] = df.other_act_freq
+    df_out['still_dur'] = df.still_dur
+    df_out['walking_dur'] = df.walking_dur
+    df_out['in_vehicle_dur'] = df.in_vehicle_dur
+    df_out['other_act_dur'] = df.other_act_dur
     df_out['signif_motion_freq'] = df.signif_motion_freq
     df_out['steps_num'] = df.steps_num
     df_out['app_entertainment_music_dur'] = df.app_entertainment_music_dur
     df_out['app_utilities_dur'] = df.app_utilities_dur
     df_out['app_shopping_dur'] = df.app_shopping_dur
     df_out['app_games_comics_dur'] = df.app_games_comics_dur
-    df_out['app_others_dur'] = df.app_others_dur
     df_out['app_health_wellness_dur'] = df.app_health_wellness_dur
     df_out['app_social_communication_dur'] = df.app_social_communication_dur
     df_out['app_education_dur'] = df.app_education_dur
     df_out['app_travel_dur'] = df.app_travel_dur
     df_out['app_art_design_photo_dur'] = df.app_art_design_photo_dur
-    df_out['app_news_magazine_dur'] = df.app_news_magazine_dur
     df_out['app_food_drink_dur'] = df.app_food_drink_dur
-    df_out['app_unknown_background_dur'] = df.app_unknown_background_dur
+    df_out['other_app_dur'] = df.other_app_dur
     df_out['app_entertainment_music_freq'] = df.app_entertainment_music_freq
     df_out['app_utilities_freq'] = df.app_utilities_freq
     df_out['app_shopping_freq'] = df.app_shopping_freq
     df_out['app_games_comics_freq'] = df.app_games_comics_freq
-    df_out['app_others_freq'] = df.app_others_freq
     df_out['app_health_wellness_freq'] = df.app_health_wellness_freq
     df_out['app_social_communication_freq'] = df.app_social_communication_freq
     df_out['app_education_freq'] = df.app_education_freq
     df_out['app_travel_freq'] = df.app_travel_freq
     df_out['app_art_design_photo_freq'] = df.app_art_design_photo_freq
-    df_out['app_news_magazine_freq'] = df.app_news_magazine_freq
     df_out['app_food_drink_freq'] = df.app_food_drink_freq
-    df_out['app_unknown_background_freq'] = df.app_unknown_background_freq
+    df_out['other_app_freq'] = df.other_app_freq
     df_out['apps_total_num'] = df.apps_total_num
     df_out['apps_unique_num'] = df.apps_unique_num
     df_out['light_min'] = df.light_min
@@ -561,6 +577,21 @@ def create_mood_features_file(input_filename):
     df_out['light_avg'] = df.light_avg
     df_out['light_stddev'] = df.light_stddev
     df_out['light_dark_ratio'] = df.light_dark_ratio
+    df_out['num_of_places'] = df.num_of_places
+    df_out['max_dur_at_place'] = df.max_dur_at_place
+    df_out['min_dur_at_place'] = df.min_dur_at_place
+    df_out['avg_dur_at_place'] = df.avg_dur_at_place
+    df_out['stdev_dur_at_place'] = df.stdev_dur_at_place
+    df_out['var_dur_at_place'] = df.var_dur_at_place
+    df_out['dur_of_homestay'] = df.dur_of_homestay
+    df_out['dur_at_work_study'] = df.dur_at_work_study
+    df_out['entropy'] = df.entropy
+    df_out['normalized_entropy'] = df.normalized_entropy
+    df_out['location_variance'] = df.location_variance
+    df_out['max_dist_from_home'] = df.max_dist_from_home
+    df_out['avg_dist_from_home'] = df.avg_dist_from_home
+    df_out['max_dist_btw_places'] = df.max_dist_btw_places
+    df_out['total_dist_travelled'] = df.total_dist_travelled
     df_out['notif_arrived_num'] = df.notif_arrived_num
     df_out['notif_clicked_num'] = df.notif_clicked_num
     df_out['notif_min_dec_time'] = df.notif_min_dec_time
@@ -572,8 +603,6 @@ def create_mood_features_file(input_filename):
     df_out['lock_freq'] = df.lock_freq
     df_out['unlock_freq'] = df.unlock_freq
     df_out['pitch_num'] = df.pitch_num
-    df_out['pitch_min'] = df.pitch_min
-    df_out['pitch_max'] = df.pitch_max
     df_out['pitch_avg'] = df.pitch_avg
     df_out['pitch_stdev'] = df.pitch_stdev
     df_out['sound_energy_min'] = df.sound_energy_min
@@ -597,7 +626,7 @@ def create_mood_features_file(input_filename):
     df_out['windspeedKmph'] = df.windspeedKmph
     df_out['weekday'] = df.weekday
     df_out['gender'] = df.gender
-    df_out['mood_gt'] = df.physical_act_gt
+    df_out['mood_gt'] = df.mood_gt
 
     df_out.to_csv('mood_features.csv', index=False)
 

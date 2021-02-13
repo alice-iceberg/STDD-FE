@@ -1,12 +1,15 @@
 import pickle
 
+import math
 import numpy as np
 import pandas as pd
 import xgboost
 from matplotlib import pyplot
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 from xgboost import XGBClassifier
+from sklearn.model_selection import GroupShuffleSplit
 
 
 def train_and_save_physical_act_models(filename):
@@ -16,11 +19,14 @@ def train_and_save_physical_act_models(filename):
     gb = df.groupby('user_id')
     [gb.get_group(x) for x in gb.groups]
 
+    total_accuracies = []
+    total_sd =[]
+
     for user_id in gb.groups:
         accuracies_output_mean = []
         accuracies_output_std = []
         print(f'Physical activity model for {user_id}')
-        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
+        output_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical/' + str(
             user_id) + '_physical_act.pkl'
 
         df = gb.get_group(user_id)
@@ -35,12 +41,17 @@ def train_and_save_physical_act_models(filename):
         accuracies_output_mean.append(accuracies.mean() * 100)
         accuracies_output_std.append(accuracies.std() * 100)
 
+        if not math.isnan(accuracies_output_mean[len(accuracies_output_mean) - 1]):
+            total_accuracies.append(accuracies_output_mean[len(accuracies_output_mean) - 1])
+        if not math.isnan(accuracies_output_std[len(accuracies_output_std) - 1]):
+            total_sd.append(accuracies_output_std[len(accuracies_output_std) - 1])
+
         print('Mean accuracy for user ', user_id, 'is: ', accuracies_output_mean[len(accuracies_output_mean) - 1])
 
         with open(output_filename, 'wb+') as f:
             pickle.dump(classifier, f)
 
-        with open('physical_act_train_accuracies.txt', 'a+') as file:
+        with open('physical_train_accuracies.txt', 'a+') as file:
             line = '**************************************************\n\n'
             file.write(line)
             line = 'Mean accuracy for user ' + str(user_id) + ' is: ' + str(
@@ -53,10 +64,25 @@ def train_and_save_physical_act_models(filename):
             line = 'Std: ' + str(accuracies_output_std) + '\n'
             file.write(line)
 
+    with open('physical_train_accuracies.txt', 'a+') as file:
+        line = '------------------------------------------------\n\n'
+        file.write(line)
+        line = 'Total scores:\n'
+        file.write(line)
+        mean_acc_total = sum(total_accuracies)/len(total_accuracies)
+        mean_sd_total = sum(total_sd)/len(total_sd)
+        print('Mean sd:', mean_sd_total)
+        print(mean_acc_total)
+        line = 'Total mean accuracy: ' + str(mean_acc_total) + '\n'
+        file.write(line)
+        line = 'Total SD accuracy:' + str(mean_sd_total) + '\n'
+        file.write(line)
+
 
 def train_and_save_mood_models(filename):
     df = pd.read_csv(filename)
-
+    total_accuracies = []
+    total_sd = []
     # splitting by user_id
     gb = df.groupby('user_id')
     [gb.get_group(x) for x in gb.groups]
@@ -79,6 +105,11 @@ def train_and_save_mood_models(filename):
         accuracies_output_mean.append(accuracies.mean() * 100)
         accuracies_output_std.append(accuracies.std() * 100)
 
+        if not math.isnan(accuracies_output_mean[len(accuracies_output_mean) - 1]):
+            total_accuracies.append(accuracies_output_mean[len(accuracies_output_mean) - 1])
+        if not math.isnan(accuracies_output_std[len(accuracies_output_std) - 1]):
+            total_sd.append(accuracies_output_std[len(accuracies_output_std) - 1])
+
         print('Mean accuracy for user ', user_id, 'is: ', accuracies_output_mean[len(accuracies_output_mean) - 1])
 
         with open(output_filename, 'wb+') as f:
@@ -97,6 +128,22 @@ def train_and_save_mood_models(filename):
             line = 'Std: ' + str(accuracies_output_std) + '\n'
             file.write(line)
 
+    with open('mood_train_accuracies.txt', 'a+') as file:
+        line = '------------------------------------------------\n\n'
+        file.write(line)
+        line = 'Total scores:\n'
+        file.write(line)
+        mean_acc_total = sum(total_accuracies)/len(total_accuracies)
+        mean_sd_total = sum(total_sd)/len(total_sd)
+        print('Mean sd:', mean_sd_total)
+        print(mean_acc_total)
+        line = 'Total mean accuracy: ' + str(mean_acc_total) + '\n'
+        file.write(line)
+        line = 'Total SD accuracy:' + str(mean_sd_total) + '\n'
+        file.write(line)
+
+
+
 
 def predict_physical_act_and_mood(filename):
     pred_mood = []
@@ -104,7 +151,7 @@ def predict_physical_act_and_mood(filename):
     main_df = pd.read_csv(filename)
 
     for row in main_df.itertuples():
-        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical_act/' + str(
+        physical_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/physical/' + str(
             row.user_id) + '_physical_act.pkl'
         mood_model_filename = '/Users/aliceberg/Programming/PyCharm/STDD-FE/mood/' + str(
             row.user_id) + '_mood.pkl'
@@ -115,13 +162,17 @@ def predict_physical_act_and_mood(filename):
             X_physical = [
                 row.still_freq,
                 row.walking_freq,
-                row.running_freq,
-                row.on_bicycle_freq,
+                row.other_act_freq,
                 row.in_vehicle_freq,
+                row.still_dur,
+                row.walking_dur,
+                row.other_act_dur,
+                row.in_vehicle_dur,
                 row.signif_motion_freq,
                 row.steps_num,
                 row.weekday,
-                row.gender]
+                row.gender
+            ]
 
             X_trans_physical = np.array(X_physical).reshape((1, -1))
             physical_pred = clf.predict(X_trans_physical)
@@ -132,37 +183,36 @@ def predict_physical_act_and_mood(filename):
             X_mood = [
                 row.still_freq,
                 row.walking_freq,
-                row.running_freq,
-                row.on_bicycle_freq,
                 row.in_vehicle_freq,
+                row.other_act_freq,
+                row.still_dur,
+                row.walking_dur,
+                row.in_vehicle_dur,
+                row.other_act_dur,
                 row.signif_motion_freq,
                 row.steps_num,
                 row.app_entertainment_music_dur,
                 row.app_utilities_dur,
                 row.app_shopping_dur,
                 row.app_games_comics_dur,
-                row.app_others_dur,
                 row.app_health_wellness_dur,
                 row.app_social_communication_dur,
                 row.app_education_dur,
                 row.app_travel_dur,
                 row.app_art_design_photo_dur,
-                row.app_news_magazine_dur,
                 row.app_food_drink_dur,
-                row.app_unknown_background_dur,
+                row.other_app_dur,
                 row.app_entertainment_music_freq,
                 row.app_utilities_freq,
                 row.app_shopping_freq,
                 row.app_games_comics_freq,
-                row.app_others_freq,
                 row.app_health_wellness_freq,
                 row.app_social_communication_freq,
                 row.app_education_freq,
                 row.app_travel_freq,
                 row.app_art_design_photo_freq,
-                row.app_news_magazine_freq,
                 row.app_food_drink_freq,
-                row.app_unknown_background_freq,
+                row.other_app_freq,
                 row.apps_total_num,
                 row.apps_unique_num,
                 row.light_min,
@@ -170,6 +220,21 @@ def predict_physical_act_and_mood(filename):
                 row.light_avg,
                 row.light_stddev,
                 row.light_dark_ratio,
+                row.num_of_places,
+                row.max_dur_at_place,
+                row.min_dur_at_place,
+                row.avg_dur_at_place,
+                row.stdev_dur_at_place,
+                row.var_dur_at_place,
+                row.dur_of_homestay,
+                row.dur_at_work_study,
+                row.entropy,
+                row.normalized_entropy,
+                row.location_variance,
+                row.max_dist_from_home,
+                row.avg_dist_from_home,
+                row.max_dist_btw_places,
+                row.total_dist_travelled,
                 row.notif_arrived_num,
                 row.notif_clicked_num,
                 row.notif_min_dec_time,
@@ -181,8 +246,6 @@ def predict_physical_act_and_mood(filename):
                 row.lock_freq,
                 row.unlock_freq,
                 row.pitch_num,
-                row.pitch_min,
-                row.pitch_max,
                 row.pitch_avg,
                 row.pitch_stdev,
                 row.sound_energy_min,
@@ -205,7 +268,7 @@ def predict_physical_act_and_mood(filename):
                 row.precipMM,
                 row.windspeedKmph,
                 row.weekday,
-                row.gender,
+                row.gender
             ]
 
             X_trans_mood = np.array(X_mood).reshape((1, -1))
@@ -213,7 +276,7 @@ def predict_physical_act_and_mood(filename):
             pred_mood.append(int(prediction_mood))
 
     main_df['mood_pred'] = pred_mood
-    main_df['phy_act_pred'] = pred_phy_act
+    main_df['physical_pred'] = pred_phy_act
     main_df.to_csv('features_with_clusters.csv', index=False)
 
 
@@ -224,7 +287,7 @@ def create_symptom_clusters_file(filename):
     symptom_clusters_df['user_id'] = df['user_id']
     symptom_clusters_df['ema_timestamp'] = df['ema_timestamp']
     symptom_clusters_df['mood'] = df['mood_pred']
-    symptom_clusters_df['physical_act'] = df['phy_act_pred']
+    symptom_clusters_df['physical_act'] = df['physical_pred']
     symptom_clusters_df['sleep'] = df['sleep_score']
     symptom_clusters_df['social_act'] = df['social_score']
     symptom_clusters_df['food'] = df['food_gt']
@@ -469,12 +532,16 @@ def plot_features_importance_total():
 
 def train_test_general_model(filename):
     dataset = pd.read_csv(filename)
+    # # splitting by user_id
+    # gb = df.groupby('user_id')
+    # [gb.get_group(x) for x in gb.groups]
+
     X = dataset.iloc[:, 2:-1].values
     y = dataset.iloc[:, -1].values
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=41)
 
-    classifier = XGBClassifier()
+    classifier = XGBClassifier(max_depth=7, n_estimators=1000)
     classifier.fit(X_train, y_train)
 
     accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
@@ -488,8 +555,43 @@ def train_test_general_model(filename):
     print('Mean accuracy: ', accuracies.mean() * 100)
     print('Std of accuracy: ', accuracies.std() * 100)
 
-    with open('depr_mode.pkl', 'wb+') as f:
+    with open('depr_model.pkl', 'wb+') as f:
         pickle.dump(classifier, f)
     xgboost.plot_importance(classifier.get_booster(), importance_type='total_gain', show_values=False)
 
     pyplot.savefig('depr(total_gain).png', bbox_inches='tight')
+
+
+def train_test_general_model_user_split(filename):
+    df = pd.read_csv(filename)
+    X = df.iloc[:, 2:-1].values
+    y = df.iloc[:, -1].values
+
+    groups = df.user_id
+    classifier = XGBClassifier()
+
+    total_accuracy = 0
+    gss = GroupShuffleSplit(n_splits=10, train_size=0.90, random_state=41)
+
+    for train_idx, test_idx in gss.split(X, y, groups):
+        x_train = df.iloc[train_idx, 2:-1]
+        y_train = df.iloc[train_idx, -1]
+
+        x_test = df.iloc[test_idx, 2:-1]
+        y_test = df.iloc[test_idx, -1]
+        classifier.fit(x_train, y_train)
+
+        # make predictions for test data
+        y_pred = classifier.predict(x_test)
+        predictions = [round(value) for value in y_pred]
+        # evaluate predictions
+        accuracy = accuracy_score(y_test, predictions)
+        print("Accuracy: %.2f%%" % (accuracy * 100.0))
+        total_accuracy += accuracy * 100
+
+    print('Average accuracy:', total_accuracy / 10)
+
+    with open('depr_model.pkl', 'wb+') as f:
+        pickle.dump(classifier, f)
+    xgboost.plot_importance(classifier.get_booster(), importance_type='gain', show_values=False, max_num_features=15)
+    pyplot.savefig('depr(gain).png', bbox_inches='tight')
