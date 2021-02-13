@@ -341,7 +341,7 @@ def extract_features(user_directory):
         calls_dataframe.columns = ["timestamp", "value"]
         calls_dataframe = calls_dataframe.drop_duplicates()
         calls_dataframe = calls_dataframe.sort_values(by='timestamp')
-        sms_dataframe = pd.read_csv(filenames[data_sources_with_ids['SMS']], low_memory=False, header=None)
+        sms_dataframe = pd.read_csv(filenames[data_sources_with_ids['SMS']], low_memory=False)
         sms_dataframe.columns = ["timestamp", "value"]
         sms_dataframe = sms_dataframe.drop_duplicates()
         sms_dataframe = sms_dataframe.sort_values(by='timestamp')
@@ -1085,7 +1085,7 @@ def main():
     start = time.perf_counter()
     # can be done in parallel only per participants and not per data sources
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(extract_features_new, filename) for filename in os.listdir(data_directory)]
+        results = [executor.submit(tools.combine_sms_files, filename) for filename in os.listdir(data_directory)]
 
     for f in concurrent.futures.as_completed(results):
         print(f.result())

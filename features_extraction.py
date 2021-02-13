@@ -365,7 +365,7 @@ def get_sms_features(table, start_time, end_time):
 
         sms_features['sms_total_num'] += 1
         contact = row.value.split(" ")[1]
-        chars = int(row.value.split(" ")[2])
+        chars = int(row.value.split(" ")[-1])
         chars_arr.append(chars)
 
         if contact not in unique_contacts:

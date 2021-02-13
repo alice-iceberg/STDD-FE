@@ -642,6 +642,45 @@ def create_mood_features_file(input_filename):
     df_out.to_csv('mood_features.csv', index=False)
 
 
+def combine_sms_files(user_directory):
+    if user_directory != '.DS_Store':
+        print(f'Started for {user_directory}')
+        user_id = int(user_directory.split('-')[-1])
+        sms_file = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/4-{user_id}/{user_id}_17.csv'
+        sms_from_notif_file = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/4-{user_id}/{user_id}_71.csv'
+
+        if os.stat(sms_from_notif_file).st_size == 0:
+            return f'Combining files finished for {user_directory}'
+
+        sms_from_notif_df = pd.read_csv(sms_from_notif_file, header=None)
+
+        if os.stat(sms_file).st_size == 0:
+            sms_df = sms_from_notif_df
+            sms_df.to_csv(sms_file, index=False)
+            return f'Combining files finished for {user_directory}'
+
+        sms_df = pd.read_csv(sms_file)
+        sms_df.columns = ['timestamp', 'value']
+        sms_from_notif_df.columns = ['timestamp', 'value']
+
+        sms_df = sms_df.sort_values(by=['timestamp'])
+        sms_from_notif_df = sms_from_notif_df.sort_values(by=['timestamp'])
+
+        sms_df = sms_df.drop_duplicates()
+        sms_from_notif_df = sms_from_notif_df.drop_duplicates()
+
+        first_timestamp = int(sms_from_notif_df['timestamp'].iloc[0])  # taking the first row
+        sms_df['timestamp'] = pd.to_numeric(sms_df['timestamp'])
+        sms_df_filtered = sms_df.query(f'timestamp<{first_timestamp}')
+        frames = [sms_df_filtered, sms_from_notif_df]
+
+        combined_df = pd.concat(frames)
+        combined_df = combined_df.sort_values(by=['timestamp'])
+
+        combined_df.to_csv(sms_file, index=False)
+    return f'Combining files finished for {user_directory}'
+
+
 def remove_mfcc_data(filename, new_filename):
     with open(new_filename, 'a+') as write_to:
         with open(filename, 'r') as file:
