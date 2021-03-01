@@ -1,15 +1,15 @@
+import math
 import pickle
 
-import math
 import numpy as np
 import pandas as pd
 import xgboost
 from matplotlib import pyplot
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GroupShuffleSplit
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 from xgboost import XGBClassifier
-from sklearn.model_selection import GroupShuffleSplit
 
 
 def train_and_save_physical_act_models(filename):
@@ -20,7 +20,7 @@ def train_and_save_physical_act_models(filename):
     [gb.get_group(x) for x in gb.groups]
 
     total_accuracies = []
-    total_sd =[]
+    total_sd = []
 
     for user_id in gb.groups:
         accuracies_output_mean = []
@@ -69,8 +69,8 @@ def train_and_save_physical_act_models(filename):
         file.write(line)
         line = 'Total scores:\n'
         file.write(line)
-        mean_acc_total = sum(total_accuracies)/len(total_accuracies)
-        mean_sd_total = sum(total_sd)/len(total_sd)
+        mean_acc_total = sum(total_accuracies) / len(total_accuracies)
+        mean_sd_total = sum(total_sd) / len(total_sd)
         print('Mean sd:', mean_sd_total)
         print(mean_acc_total)
         line = 'Total mean accuracy: ' + str(mean_acc_total) + '\n'
@@ -133,16 +133,14 @@ def train_and_save_mood_models(filename):
         file.write(line)
         line = 'Total scores:\n'
         file.write(line)
-        mean_acc_total = sum(total_accuracies)/len(total_accuracies)
-        mean_sd_total = sum(total_sd)/len(total_sd)
+        mean_acc_total = sum(total_accuracies) / len(total_accuracies)
+        mean_sd_total = sum(total_sd) / len(total_sd)
         print('Mean sd:', mean_sd_total)
         print(mean_acc_total)
         line = 'Total mean accuracy: ' + str(mean_acc_total) + '\n'
         file.write(line)
         line = 'Total SD accuracy:' + str(mean_sd_total) + '\n'
         file.write(line)
-
-
 
 
 def predict_physical_act_and_mood(filename):

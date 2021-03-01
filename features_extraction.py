@@ -15,10 +15,6 @@ from sklearn.cluster import KMeans
 import tools
 
 
-# todo read file once and give dataframe as an input
-# todo stop extracting features if ema_order changed
-
-
 def get_activity_recognition_features(table, start_time, end_time):
     """
 
@@ -1253,9 +1249,9 @@ def get_gravity_features(table, start_time, end_time):
         return gravity_features
 
     for row in table_filtered.itertuples(index=False):
-        gravities_x.append(row.value.split(" ")[1])
-        gravities_y.append(row.value.split(" ")[2])
-        gravities_z.append(row.value.split(" ")[3])
+        gravities_x.append(float(row.value.split(" ")[1]))
+        gravities_y.append(float(row.value.split(" ")[2]))
+        gravities_z.append(float(row.value.split(" ")[3]))
 
     gravity_features['gr_x_mean'] = statistics.mean(gravities_x)
     gravity_features['gr_y_mean'] = statistics.mean(gravities_y)
@@ -1388,7 +1384,5 @@ def get_sleep_duration(table):
                     sleep_durations[yesterday] = np.nan
                 else:
                     night_timestamps = []
-
-    print(sleep_durations)
 
     return sleep_durations

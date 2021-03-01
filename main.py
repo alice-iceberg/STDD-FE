@@ -1,25 +1,79 @@
-import concurrent.futures
 import math
-import os
 import statistics
 import time
 from datetime import datetime
-
+import concurrent.futures
+import os
 import numpy as np
 import pandas as pd
 
 import features_extraction
 import tools
 
-USER_ID = 89
-data_directory = '51people'
-data_sources = [1, 4, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 26, 27, 28, 29, 71]
+data_directory = '54people'
+data_sources = [1, 4, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 26, 27, 28, 29, 71]
 
-user_ids = [85, 86, 87, 89, 90, 91, 92, 93, 97, 98, 100, 102, 103, 104, 105,
-            107, 108, 109,
-            110, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 125, 126, 128, 129,
-            131, 132, 133, 134, 135, 137, 141, 143, 146, 149, 150, 151, 152, 153, 154, 156,
-            158, 159]
+user_ids = [
+    85,
+    86,
+    87,
+    89,
+    90,
+    91,
+    92,
+    93,
+    97,
+    98,
+    99,
+    100,
+    102,
+    103,
+    104,
+    105,
+    107,
+    108,
+    109,
+    110,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    125,
+    126,
+    128,
+    129,
+    131,
+    132,
+    133,
+    134,
+    135,
+    137,
+    141,
+    143,
+    146,
+    149,
+    150,
+    151,
+    152,
+    154,
+    155,
+    156,
+    159,
+    162,
+    163,
+    164,
+    165,
+    169,
+    170,
+    171,
+    173
+]
 
 user_ids_with_gender = {
     85: 1,
@@ -32,6 +86,7 @@ user_ids_with_gender = {
     93: 0,
     97: 0,
     98: 0,
+    99: 0,
     100: 1,
     102: 0,
     103: 0,
@@ -51,7 +106,6 @@ user_ids_with_gender = {
     120: 1,
     121: 1,
     122: 0,
-    124: 1,
     125: 0,
     126: 0,
     128: 1,
@@ -69,12 +123,18 @@ user_ids_with_gender = {
     150: 1,
     151: 1,
     152: 1,
-    153: 1,
     154: 0,
+    155: 0,
     156: 1,
-    158: 0,
-    159: 1
-
+    159: 1,
+    162: 0,
+    163: 0,
+    164: 0,
+    165: 0,
+    169: 0,
+    170: 1,
+    171: 1,
+    173: 1
 }
 user_ids_with_depression_group = {
     85: 2,
@@ -87,6 +147,7 @@ user_ids_with_depression_group = {
     93: 2,
     97: 2,
     98: 1,
+    99: 2,
     100: 2,
     102: 1,
     103: 3,
@@ -106,7 +167,6 @@ user_ids_with_depression_group = {
     120: 1,
     121: 1,
     122: 3,
-    124: 3,
     125: 3,
     126: 3,
     128: 2,
@@ -124,12 +184,18 @@ user_ids_with_depression_group = {
     150: 3,
     151: 3,
     152: 3,
-    153: 3,
     154: 1,
+    155: 2,
     156: 1,
-    158: 3,
-    159: 2
-
+    159: 2,
+    162: 2,
+    163: 1,
+    164: 1,
+    165: 3,
+    169: 3,
+    170: 3,
+    171: 1,
+    173: 2
 }
 
 output_columns = [
@@ -238,7 +304,7 @@ output_columns = [
     'sound_energy_min',
     'sound_energy_max',
     'sound_energy_avg',
-    'sound_energy_stdev'
+    'sound_energy_stdev',
     'wifi_unique_num',
     'typing_freq',
     'typing_unique_apps_num',
@@ -302,7 +368,7 @@ def extract_features(user_directory):
         user_id = int(user_directory.split('-')[-1])
         filenames = tools.create_filenames(user_id, data_sources)
         output_table = pd.DataFrame(columns=output_columns)
-        output_filename = f'extracted_features_{user_id}.csv'
+        output_filename = f'features_until_EMA/extracted_features_{user_id}.csv'
         print(f'Feature extraction started for {user_directory}')
 
         ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/5people/{user_directory}/{user_id}_11.csv'
@@ -398,7 +464,7 @@ def extract_features(user_directory):
 
         for row in ema_table.itertuples():
             print('*************' + row.timestamp + '*************')
-            ema_time_range = tools.get_ema_time_range_4hrs(int(row.timestamp))
+            ema_time_range = tools.get_ema_time_range_until_ema(int(row.timestamp))
 
             # region extracting features related to EMA
 
@@ -572,7 +638,7 @@ def extract_features(user_directory):
                     'screen_off_freq': screen_state_features['screen_off_freq'],
                     'lock_freq': unlock_state_features['lock_freq'],
                     'unlock_freq': unlock_state_features['unlock_freq'],
-                    'unlock_dur':unlock_state_features['unlock_dur'],
+                    'unlock_dur': unlock_state_features['unlock_dur'],
                     'pitch_num': microphone_features['pitch_num'],
                     'pitch_avg': microphone_features['pitch_avg'],
                     'pitch_stdev': microphone_features['pitch_stdev'],
@@ -623,10 +689,10 @@ def extract_features_double_period(user_directory):
         user_id = int(user_directory.split('-')[-1])
         filenames = tools.create_filenames(user_id, data_sources)
         output_table = pd.DataFrame(columns=output_columns_double_period)
-        output_filename = f'new_extracted/extracted_features_{user_id}.csv'
+        output_filename = f'features_until_EMA_double/extracted_features_{user_id}.csv'
         print(f'Feature extraction started for {user_directory}')
 
-        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_11.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/54people/{user_directory}/{user_id}_11.csv'
         tools.remove_duplicate_ema(ema_filename)
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
@@ -655,22 +721,22 @@ def extract_features_double_period(user_directory):
             # region features extraction
             for i, value in enumerate(ema_time_range['time_from']):
                 print("Extracting stored media features")
-                stored_media_features = features_extraction.get_new_stored_media_features(stored_media_dataframe,
-                                                                                          ema_time_range[
-                                                                                              'prev_time_from'][i],
-                                                                                          ema_time_range[
-                                                                                              'prev_time_to'][i],
-                                                                                          value,
-                                                                                          ema_time_range['time_to'][i])
+                stored_media_features = features_extraction.get_stored_media_features(stored_media_dataframe,
+                                                                                      ema_time_range[
+                                                                                          'prev_time_from'][i],
+                                                                                      ema_time_range[
+                                                                                          'prev_time_to'][i],
+                                                                                      value,
+                                                                                      ema_time_range['time_to'][i])
 
                 print("Extracting calendar features")
-                calendar_features = features_extraction.get_new_calendar_features(calendar_dataframe,
-                                                                                  ema_time_range[
-                                                                                      'prev_time_from'][i],
-                                                                                  ema_time_range[
-                                                                                      'prev_time_to'][i],
-                                                                                  value,
-                                                                                  ema_time_range['time_to'][i])
+                calendar_features = features_extraction.get_calendar_features(calendar_dataframe,
+                                                                              ema_time_range[
+                                                                                  'prev_time_from'][i],
+                                                                              ema_time_range[
+                                                                                  'prev_time_to'][i],
+                                                                              value,
+                                                                              ema_time_range['time_to'][i])
                 # endregion
 
                 # appending dataframe
@@ -691,13 +757,13 @@ def extract_features_double_period(user_directory):
 
 def add_sleep_duration(user_directory):
     if user_directory != '.DS_Store':
-        user_directory = f"4-{user_directory.split('_')[-1].split('.')[0]}"
+        # user_directory = f"4-{user_directory.split('_')[-1].split('.')[0]}"
         user_id = int(user_directory.split('-')[-1])
         print('Sleep extraction started for user', user_id)
 
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
-        app_usage_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_28.csv'
-        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_11.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/features_until_EMA/extracted_features_{user_id}.csv'
+        app_usage_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/54people/{user_directory}/{user_id}_28.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/54people/{user_directory}/{user_id}_11.csv'
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
@@ -740,14 +806,15 @@ def add_sleep_duration(user_directory):
 
 
 def add_weather_data(user_directory):
-    if user_directory != '.DS_Store' and user_directory != 'done':
-        user_directory = f"4-{user_directory.split('_')[-1].split('.')[0]}"
+    # for each user separately
+    if user_directory != '.DS_Store':
+        # user_directory = f"4-{user_directory.split('_')[-1].split('.')[0]}"
         print(f'Weather features extraction started for {user_directory}')
         weather_df = pd.read_csv('/Users/aliceberg/Programming/PyCharm/STDD-FE/incheon.csv', index_col='date_time')
         user_id = int(user_directory.split('-')[-1])
 
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features/extracted_features_{user_id}.csv'
-        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/51people/{user_directory}/{user_id}_11.csv'
+        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/features_until_EMA/extracted_features_{user_id}.csv'
+        ema_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/54people/{user_directory}/{user_id}_11.csv'
 
         ema_table = pd.read_csv(ema_filename, delimiter=',', names=['timestamp', 'value'], header=None)
         ema_table = ema_table['value'].str.split(' ', n=10, expand=True)
@@ -813,10 +880,11 @@ def add_weather_data(user_directory):
 def missing_data_imputation_ffill(user_directory):
     if user_directory != '.DS_Store':
         print(f'Started missing data imputation for {user_directory}')
-        user_id = int(user_directory.split('-')[-1])
-        output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
+        # user_id = int(user_directory.split('-')[-1])
+        # output_filename = f'/Users/aliceberg/Programming/PyCharm/STDD-FE/extracted_features2/extracted_features_{user_id}.csv'
+        output_filename = user_directory
         output_dataframe = pd.read_csv(output_filename)
-        columns = ['images_num', 'videos_num', 'music_num', 'cal_events_num', 'sound_energy_min',
+        columns = ['sound_energy_min',
                    'sound_energy_max', 'sound_energy_avg', 'sound_energy_stdev']
         for col in columns:
             output_dataframe[col] = output_dataframe[col].ffill()
@@ -824,54 +892,6 @@ def missing_data_imputation_ffill(user_directory):
         output_dataframe.to_csv(output_filename, index=False)
 
     return f'Finished missing data imputation for {user_directory}'
-
-
-def social_activity_score_calculation_old(filename):
-    weight = 10  # todo: the value of weight is to be decided
-    dataframe = pd.read_csv(filename, low_memory=False, encoding='utf-8')
-    social_activity_values = []
-    social_activity_scores = []
-    print(dataframe.columns)
-
-    for user_id in user_ids:
-        for row in dataframe.itertuples():
-            if int(row.user_id) == int(user_id):
-                print(f'Social activity score is calculated for {user_id}')
-                # quantity in multiplied by weight and durations are divided by 1000 for scaling
-                social_incoming = \
-                    int(row.calls_missed_num) * weight + int(row.calls_in_num) * weight + round(int(
-                        row.calls_min_in_dur) / 1000) + round(int(row.calls_max_in_dur) / 1000) + round(int(
-                        row.calls_avg_in_dur) / 1000) + round(int(row.calls_total_in_dur) / 1000) + int(
-                        row.sms_min_chars) \
-                    + int(round(int(row.sms_max_chars))) + int(round(float(row.sms_avg_chars))) + \
-                    int(row.sms_unique_contacts) * weight + int(row.sms_total_num) * weight
-
-                social_outgoing = round(int(row.app_social_communication_dur) / 1000) + int(
-                    row.app_social_communication_freq) * weight + int(row.calls_out_num) * weight + round(
-                    int(row.calls_min_out_dur) / 1000) + round(
-                    int(row.calls_max_out_dur) / 1000) + round(
-                    int(float(row.calls_avg_out_dur)) / 1000) + round(
-                    int(row.calls_total_out_dur) / 1000)
-
-                social_activity_value = social_incoming + social_outgoing
-                social_activity_values.append(social_activity_value)
-
-        social_activity_threshold = tools.get_social_activity_threshold(social_activity_values)
-        for social_activity_value in social_activity_values:
-            if social_activity_value <= social_activity_threshold:
-                social_activity_scores.append(1)
-            elif tools.in_range(social_activity_value, social_activity_threshold, social_activity_threshold * 2):
-                social_activity_scores.append(2)
-            elif tools.in_range(social_activity_value, social_activity_threshold * 2, social_activity_threshold * 3):
-                social_activity_scores.append(3)
-            elif tools.in_range(social_activity_value, social_activity_threshold * 3, social_activity_threshold * 4):
-                social_activity_scores.append(4)
-            elif social_activity_value > social_activity_threshold * 4:
-                social_activity_scores.append(5)
-        social_activity_values = []
-
-    dataframe['social_score'] = social_activity_scores
-    dataframe.to_csv(filename, index=False)
 
 
 def social_act_score_calculation(filename):
@@ -893,7 +913,8 @@ def social_act_score_calculation(filename):
                'sms_max_chars',
                'sms_avg_chars',
                'sms_unique_contacts',
-               'sms_total_num']
+               'sms_total_num',
+               'total_dist_travelled']
 
     # splitting by user_id
     gb = df_main.groupby('user_id')
@@ -1078,14 +1099,16 @@ def convert_ema_to_symptom_scores(filename):
 
 def remove_missing_values_rows(filename, threshold):
     df = pd.read_csv(filename, low_memory=False)
-    df = df[df.isnull().mean(axis=1) < threshold]
+    df = df[df.isnull().sum(axis=1) < threshold]
 
     df.to_csv(filename, index=False)
 
 
 def main():
     start = time.perf_counter()
-    # can be done in parallel only per participants and not per data sources
+    print('Started')
+
+    # combining sms files
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = [executor.submit(tools.combine_sms_files, filename) for filename in os.listdir(data_directory)]
 
